@@ -1,14 +1,14 @@
 # Skill-Based LLM Evaluation Framework
 
 **Working title:** PICO-8 Skill Extraction & Metacognitive Evaluation
-**Status:** Design specification, v0.2
-**Date:** 2026-05-14
+**Status:** Design specification, v0.4 (v0.1 deliverable closed)
+**Date:** 2026-05-15
 
-**Changelog from v0.1:**
-- §10 corrected from three grids to four (separated `task × skill` tagging view from `model × task` outcome view).
-- §11 (was §11) renumbered to §12; new §11 added on Phase 1.5 catalog clustering.
-- §5.2 extended with explicit guidance on multi-file projects.
-- Worked example from `Enichan/Pico8Platformer` dry run referenced.
+**Changelog:**
+- **v0.4 (2026-05-15):** v0.1 deliverable completed. Three grids rendered (Task × Score, Answer × Metacognition joint, Skill × Task tagging matrix). Student model changed from local Qwen3-8B to Qwen3-235B-A22B-Instruct-2507 via Cerebras after local CPU inference and Groq's 6K TPM cap proved insufficient. Grading procedure documented as the third LLM prompt. v0.1 results section added (§16).
+- **v0.3:** Student-run phase uses 4-part metacognitive prompt (skill candidates → skill chosen → rationale → answer). Adds fifth grid (Metacognition × Answer). Implements the original framework note: *"the LLM must say skill name before using it."*
+- **v0.2:** Four grids (not three); Phase 1.5 clustering; multi-file project handling.
+- **v0.1:** Initial draft.
 
 ---
 
@@ -278,7 +278,7 @@ In the corpus directory, alongside the manifest:
 
 When carts are "all rights reserved" — which is the default on the Lexaloffle BBS — you can still document them and use them privately, but you cannot redistribute the cart files. The reproducible artifact then becomes: the manifest (with URLs and hashes) + a `fetch_carts.sh` script that re-downloads. Anyone re-running the eval downloads their own copy. This is the same pattern used by, e.g., academic NLP corpora like Common Crawl-based datasets.
 
-## 10. Evaluation Output: The Four Grids
+## 10. Evaluation Output: The Four Grids + Metacognition
 
 The underlying object is a tensor:
 
@@ -295,11 +295,45 @@ T[model, task, skill] ∈ {pass, partial, fail, n/a}
 | 3 | **Model × Task** | Models | Tasks (sorted easy→hard) | Aggregate pass on the task | Standard leaderboard: head-to-head model comparison | Outcome |
 | 4 | **Skill × Task for a given model M** | Coarse skills | Tasks | Pass/fail of M on each (skill, task) pair the task taps | Diagnosing where M broke: was it the skill, or task-specific noise? | Outcome, one model at a time |
 
-Color coding for the three outcome grids: green = pass, yellow = partial credit (when grading rubric awards partial points, à la Skill-Mix's 3-point illustrate-the-skill + 1-point-on-topic + 1-point-coherent rubric), red = fail, grey = n/a. Grid 2 (task × skill) is a binary tagging matrix — black-filled cells indicate the tagging; no outcome colors apply.
+Color coding for the three outcome grids: green = pass, yellow = partial credit, red = fail, grey = n/a.
 
-"Sorted easy→hard" for tasks means: sort tasks by ascending pass rate of a reference model (initially Qwen3-8B). Once you have multiple models, you can sort by average across models. This gives the difficulty curve that Arora & Goyal's emergence theory predicts should shift with model scale.
+### 10.1 The fifth grid: Metacognition × Answer
 
-**Default catalog axis: coarse skills.** All four grids use the coarse skill catalog produced by Phase 1.5 clustering (§11). The raw skill catalog is preserved for drill-down: when a coarse-skill cell looks anomalous, you can expand to see the raw skills inside it.
+Beyond pass/fail on the answer, the student is asked at inference time to **name the skill it is using** before applying it. This implements the original framework note: *"the LLM must say skill name before using it. In chain of thought."*
+
+The student's response is structured into four parts:
+
+```
+SKILL_CANDIDATES: <list of cognitive operations the student thinks apply>
+SKILL_CHOSEN: <one skill the student commits to>
+RATIONALE: <one sentence on why this skill>
+ANSWER: <the actual answer to the task>
+```
+
+Two scores are produced per (model, task):
+
+- **Answer score:** pass / partial / fail against the task's rubric (the standard grids 1–4 use this).
+- **Metacognition score:** match / near_match / miss based on whether the student's `SKILL_CHOSEN` (in its own words) maps onto the catalog skill the task is tagged with.
+
+The fifth grid plots Answer × Metacognition for each (model, task) pair:
+
+|                       | metacog match | near-match | miss |
+|-----------------------|---------------|------------|------|
+| **answer pass**       | true competence | knew what but mislabeled | got lucky |
+| **answer partial**    | almost-knew-it | partial understanding | confused success |
+| **answer fail**       | knew it wouldn't work | partial misunderstanding | blind |
+
+The interesting diagnostic cells are *"answer pass + metacog miss"* (the model produced the right answer but cannot articulate what it did) and *"answer fail + metacog match"* (the model correctly identified what was being asked but failed to execute). Both are signals about the model's self-awareness, not just its raw capability.
+
+### 10.2 Why free-form, not catalog-forced
+
+The student is **not shown the skill catalog at inference time**. Showing it would leak the answer (a task tagged `spot_buggy_respawn_assignment` with that skill in the menu is heavily hinted toward the bug). Skill-Mix explicitly forbids this practice for grading purposes.
+
+Instead, the student names skills in its own words (e.g., "identify duplicate variable assignment"). The grading pass compares this free-form name against the catalog skill the task was tagged with and judges semantic similarity. This produces a stricter test: the student must have a usable vocabulary for its own reasoning, not just match a multiple-choice menu.
+
+The trained version of this (Phase 3, future work) would fine-tune the student on the catalog so the model genuinely knows the 33 named skills, then ask it to enumerate from a real internal vocabulary rather than free-form invention.
+
+**Default catalog axis: coarse skills.** All four primary grids use the coarse skill catalog produced by Phase 1.5 clustering (§11). The raw skill catalog is preserved for drill-down. The metacognition grid (#5) uses free-form student-named skills mapped against coarse catalog skills at grading time.
 
 ## 11. Phase 1.5: Skill Catalog Clustering
 
@@ -355,5 +389,78 @@ By end of v0.1 you should have, on disk:
 
 ## 15. Changelog
 
-- **v0.2 (2026-05-14):** §10 corrected to four grids (separated structural task×skill view from outcome views, added skill×task-for-a-given-model diagnostic view). New §11 on Phase 1.5 clustering; old §11 (Phase 2) renumbered to §12. Multi-file project handling referenced from QA companion doc. Worked example from `Enichan/Pico8Platformer` dry run informs the calibration notes here.
+- **v0.4 (2026-05-15):** v0.1 deliverable closed. Three grids rendered. Student model switched from local Qwen3-8B (Ollama timed out at 15min) → Qwen3-32B on Groq (TPM cap too low) → Qwen3-235B-A22B-Instruct-2507 on Cerebras. Grading prompt formalized as the third LLM prompt. v0.1 results section added (§16).
+- **v0.3 (2026-05-14):** Student-run phase uses 4-part metacognitive prompt. Adds the fifth grid (Metacognition × Answer joint).
+- **v0.2 (2026-05-14):** §10 corrected to four grids; new §11 on Phase 1.5 clustering; multi-file project handling.
 - **v0.1 (2026-05-14):** Initial draft. Captures pipeline, UID scheme, corpus sizing, QA guideline, context-window guidance, model-choice checklist, datasheet structure, grid spec, deliverables.
+
+## 16. v0.1 Results (Bootyful Demake)
+
+### 16.1 What was run
+
+- **Corpus:** 1 PICO-8 cart, *Bootyful Demake* by nate2squared (Lexaloffle BBS, CC-BY-NC-SA-4.0).
+- **Cart size:** 1,055 lines of Lua, ~10K tokens. Single `.p8` file.
+- **Skill extraction:** Claude Opus 4.7, chunked extraction across 2 chunks of the cart, 33 named skills total.
+- **Task generation:** Claude Opus 4.7, 10 evaluation tasks generated from the 33-skill catalog with the whole cart as context.
+- **Student model:** Qwen3-235B-A22B-Instruct-2507, hosted on Cerebras's free API tier.
+- **Grading:** Claude Opus 4.7, one fresh chat per task, scoring two axes (answer score and metacognition score) per task.
+
+### 16.2 Headline numbers
+
+| Score axis | Distribution |
+|------------|--------------|
+| Answer score | pass = 7/10, partial = 2/10, fail = 1/10 |
+| Metacognition score | match = 6/10, near_match = 4/10, miss = 0/10 |
+
+Joint distribution (answer × metacog):
+
+|         | match | near_match | miss |
+|---------|:-----:|:----------:|:----:|
+| pass    | 5     | 2          | 0    |
+| partial | 1     | 1          | 0    |
+| fail    | 0     | 1          | 0    |
+
+Pass rate stratified by compositionality (k-level):
+
+| k-level | pass | partial | fail | total |
+|---------|:----:|:-------:|:----:|:-----:|
+| k=1     | 3    | 2       | 0    | 5     |
+| k=2     | 3    | 0       | 1    | 4     |
+| k=3     | 1    | 0       | 0    | 1     |
+
+### 16.3 Findings
+
+**1. The student is metacognitively robust.** Across all 10 tasks, the student named a cognitive operation that mapped onto the catalog skill (match) or onto a related skill at lower specificity (near_match). The `miss` column was empty. The student has a usable internal vocabulary for the operations it performs on code, not just pattern-matched fluency.
+
+**2. The single failure was on a bug-trace task.** Task `10e7-7d82-76fa-48af` asked the student to trace a copy-paste bug in the cart's `fall()` function. The student correctly identified the bug initially but contradicted itself mid-trace, claiming `hero.y` ended up assigned when in fact both assignments are to `hero.x`. The metacog score was `near_match` (the student named the right family of cognitive operation); the answer score was `fail`. This is the diagnostic value of separating the two axes — the model knew what kind of problem this was but executed it incorrectly.
+
+**3. k-level does not strictly predict difficulty for this student.** The hardest task (k=3, deldoor side-effects with three tagged skills) passed. The single failure was at k=2. With only 10 tasks the sample is too small to draw strong conclusions, but the result suggests this particular student handles compositional reasoning reasonably well on this corpus.
+
+**4. Two of three catalog "bug detection" skills appeared on the failure.** Grid C (skill × task) shows that `spot_buggy_respawn_assignment` and `infer_falling_death_condition` are the only two skills with red cells. The third bug-detection skill, `identify_random_trap_assignment`, appeared on a partial-credit task. This is consistent across the catalog: bug detection is where this student is weakest.
+
+### 16.4 Caveats
+
+- **Single cart, single student model.** Multi-cart and multi-model comparisons require scaling the corpus and running additional model passes. The framework is model-agnostic; the same pipeline runs unchanged on any model accepting text input.
+- **Grading was done in 10 separate Claude chats.** v0.1 used per-task chats for grading-independence. v0.2 could re-grade with a different strong LLM as second-pass verification.
+- **No clustering pass was run.** With one cart producing 33 skills, the catalog is small enough that clustering (Phase 1.5) would offer minimal coarsening. Clustering becomes relevant once the corpus grows to 3+ carts.
+- **The `gameinit` chunk of Bootyful Demake was not included in skill extraction.** Several skills reference data structures whose definitions live in that chunk. Documented in the audit log. v0.2 should run a supplementary extraction.
+
+### 16.5 v0.1 artifacts
+
+All artifacts live in the repository:
+
+- `corpus/carts/bootyful_demake/bootyful_demake.p8` — the cart
+- `corpus/manifest.jsonl` — cart manifest with UID, license, source URL, hash
+- `extraction/raw/bootyful_demake.json` — raw 2-chunk extraction
+- `extraction/raw/skills_raw.jsonl` — flattened 33-skill catalog with UIDs
+- `tasks/bootyful_demake.json` — 10 tasks with prompts, expected answers, rubrics, skill tags
+- `runs/qwen3-235b-cerebras/outputs/*.json` — 10 student responses
+- `runs/qwen3-235b-cerebras/grades/*.json` — 10 grader verdicts
+- `runs/qwen3-235b-cerebras/grading_prompts/*.txt` — 10 assembled grading prompts (one per task)
+- `results/grids/grid_a_task_score.png` — per-task scorecard
+- `results/grids/grid_b_answer_metacog.png` — answer × metacog joint distribution
+- `results/grids/grid_c_skill_task.png` — skill × task tagging matrix with outcomes
+- `qa/audit_log.md` — methodology decisions and discovered issues
+- `docs/EVAL_FRAMEWORK_DOC.md` — this document
+- `docs/QA_GUIDELINE_AND_PROMPTS.md` — QA criteria, chunking rules, all three LLM prompts (QA judgment, skill extraction, task generation, grading)
+- `scripts/` — helper scripts for the pipeline (UID assignment, task validation, student-run, grading-prompt assembly, grid rendering)

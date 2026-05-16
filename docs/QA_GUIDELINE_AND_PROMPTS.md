@@ -1,12 +1,13 @@
 # PICO-8 Cart QA Guideline and LLM Prompts
 
 **Companion to:** EVAL_FRAMEWORK_DOC.md
-**Version:** 0.3
-**Date:** 2026-05-14
+**Version:** 0.4
+**Date:** 2026-05-15
 
 **Changelog:**
-- **v0.3:** Simplified §2 chunking strategy. PICO-8's size limits mean most carts don't need chunking; the rule is now "one chunk = one logical unit of authorship" (whole cart for single-file carts, one `.lua` file per module for `#INCLUDE` projects). Dropped the 50–200 line "sweet spot" framing as over-applied generic advice.
-- **v0.2:** Added §2.4 on multi-file projects (now folded into §2.1). Added §3.1 explicit instruction on skill granularity. Refined skill-extraction prompt: chunk-size-dependent skill count, k_level criterion clarified, anti-generalization instruction. Added §7 worked example and §8 clustering phase.
+- **v0.4 (2026-05-15):** Added §2.7 chunking-exhaustiveness rule (a real gap was discovered on the v0.1 Bootyful Demake extraction). Added §9 grading prompt — the fourth LLM prompt in the framework, used for scoring student responses against rubrics on two axes (answer correctness and metacognition match).
+- **v0.3 (2026-05-14):** Simplified §2 chunking strategy. PICO-8's size limits mean most carts don't need chunking; the rule is "one chunk = one logical unit of authorship."
+- **v0.2:** Added §2.4 on multi-file projects (folded into §2.1). Added §3.1 explicit instruction on skill granularity. Refined skill-extraction prompt: chunk-size-dependent skill count, k_level criterion clarified, anti-generalization instruction. Added §7 worked example and §8 clustering phase.
 - **v0.1:** Initial guideline + QA + skill-extraction prompts.
 
 This document contains three things:
@@ -160,9 +161,22 @@ chunks:
   # px9_comp.lua, px9_decomp.lua excluded: third-party compression library
 ```
 
----
+### 2.7 Chunking must be exhaustive
 
-## 3. Skill Naming Convention
+When extracting skills across multiple chunks, the **union of all chunk contents must equal the cart's full `__lua__` section.** Skipping any portion of the code silently loses skills and produces a catalog that under-represents the cart.
+
+**This rule was added after a real gap was discovered during v0.1.** The Bootyful Demake cart was extracted in two chunks (`travel_collision_objects_menus` and `gamedraw_and_update`), but the `gameinit_and_helpers` chunk — containing the cart's data table definitions (`levels`, `doors`, `keydb`, `booty`) and timing helpers (`wait`, `slow`, `timer`) — was never fed to extraction. Several of the 33 extracted skills referenced these data structures without the LLM having seen their definitions.
+
+**Verification check before declaring extraction complete:**
+
+```python
+# Sum the line counts of all chunks; compare to the cart's __lua__ section
+total_lua_lines = count_lines(cart.lua_section)
+chunks_lines = sum(count_lines(chunk) for chunk in chunks)
+assert chunks_lines >= 0.95 * total_lua_lines, "chunking is incomplete"
+```
+
+A 5% tolerance accounts for whitespace differences and intentionally-excluded vendored libraries (e.g., `px9_comp.lua` for compression). Anything below ~95% should be investigated.
 
 ---
 
@@ -387,106 +401,6 @@ chunk_summary_from_human: <optional, one sentence; leave blank if none>
 <paste 50–400 lines of Lua here, original whitespace preserved>
 ```
 ```
-```
-```
-SYSTEM:
-You extract a list of NAMED SKILLS that a reader must exercise to fully
-understand a chunk of PICO-8 Lua code. You are extracting skills FROM
-THE READER'S PERSPECTIVE — what cognitive operations the reader performs
-on the code — not skills that the code's protagonist character exercises.
-
-Every skill name follows a strict format:
-
-  word_word_word_word
-
-Exactly four words, lower-case, joined by underscores. The first word is
-a verb. Examples of valid skill names:
-
-  identify_draw_callback_function
-  trace_variable_across_scopes
-  detect_collision_response_pattern
-  parse_state_machine_logic
-  recognize_particle_emission_pattern
-  infer_player_input_handling
-  locate_initialization_versus_update
-  match_function_call_signatures
-  predict_loop_termination_condition
-  derive_table_indexing_pattern
-
-Skills must be NARROW and CONCRETE. They name a specific cognitive
-operation, not a broad topic. "Understand Lua" is too broad. "Read code"
-is too broad. "Trace variable across scopes" is the right grain.
-
-USER:
-Extract the named skills exercised by a reader of the code chunk below.
-
-How many skills to propose, scaled to chunk size:
-- Chunks under 100 lines: propose 3 to 6 skills.
-- Chunks between 100 and 400 lines: propose 6 to 12 skills.
-- Chunks over 400 lines (typically a whole single-file cart): propose
-  10 to 18 skills.
-Over-extraction is preferred to under-extraction at this stage; a later
-clustering pass merges duplicates. Do NOT pre-emptively generalize. If
-four narrow skills could be one broad skill, propose the four narrow ones.
-
-For each skill, provide:
-- name: the four-word skill name
-- definition: one sentence describing the cognitive operation
-- evidence: a specific line or function name from the chunk where the
-  skill is exercised
-- k_level: the number of distinct cognitive operations the reader must
-  combine to apply the skill. NOT the number of lines or functions in
-  the code. A pattern that occupies many lines but is recognized in one
-  step is k=1; a pattern that occupies few lines but requires composing
-  multiple recognitions (e.g., reading bit-packed flags THEN applying
-  them to geometry) is k=3.
-  - k=1: atomic, single-step recognition.
-  - k=2: requires composing two atomic operations.
-  - k=3: requires three or more.
-
-Return ONLY valid JSON in this schema:
-
-{
-  "chunk_id": "<as provided>",
-  "skills": [
-    {
-      "name": "word_word_word_word",
-      "definition": "<one sentence>",
-      "evidence": "<line range or function name in the chunk>",
-      "k_level": 1 | 2 | 3
-    },
-    ...
-  ],
-  "chunk_summary": "<one sentence: what this chunk does, in plain English>"
-}
-
-DISCIPLINE CHECKS — before returning:
-- Confirm every name is EXACTLY four words separated by underscores. If
-  not, rename.
-- Confirm the first word of every name is a verb.
-- Confirm no two skills are paraphrases of each other. If two are nearly
-  identical, merge them. (Sibling concepts at similar abstraction levels
-  — e.g., one skill for input-grace-period and one for ground-grace-period
-  — are NOT paraphrases; keep both.)
-- Confirm each skill has specific evidence from the chunk, not generic
-  reasoning. "This function has loops" is not evidence; "lines 142-148
-  iterate over collision tiles" is evidence.
-- Confirm no skill is too broad to be evidenced by a specific line or
-  function. If a skill would be evidenced by "the whole file," it is
-  too broad — split it or drop it.
-- Confirm k_level reflects cognitive composition, not code size.
-
-CHUNK:
-chunk_id: <e.g. "bootyful_demake.p8 :: whole_cart">
-source_cart: <e.g. "bootyful_demake.p8">
-chunk_summary_from_human: <optional, one sentence; leave blank if none>
-
-```lua
-<paste one logical unit of Lua code: for single-file carts, the entire
- __lua__ section; for multi-file projects, one .lua module file.
- Original whitespace preserved.>
-```
-```
 
 **Sampling parameters:** temperature = 0.2 (slight non-zero so the model is willing to propose distinct skill names rather than collapsing to one canonical phrasing it has seen before; the discipline checks at the end of the prompt enforce uniformity), top_p = 1, max_tokens ≈ 1500. The output is short but the model needs room to draft and revise skill names before the final JSON.
 
@@ -687,3 +601,111 @@ Evaluation       →  pass/fail tensor over (model, task, coarse skill)
 ```
 
 The four grids documented in EVAL_FRAMEWORK_DOC.md §10 are built on the **coarse** catalog by default. Raw skills are available for drill-down.
+
+---
+
+## 9. LLM Prompt: Grading a Student Response
+
+This is the fourth LLM prompt in the framework. It is sent to a strong LLM (Claude Opus 4.7) once per student response. The grader scores two independent axes per task:
+
+- **Answer score** — does the student's ANSWER section solve the task per the rubric? Returns `pass` / `partial` / `fail`.
+- **Metacognition score** — does the student's free-form `SKILL_CHOSEN` map onto the catalog skill the task was tagged with? Returns `match` / `near_match` / `miss`.
+
+The grader does **not** see other tasks, other students, or other graders' verdicts. Each grading call is independent. This is the same independence-per-call discipline used everywhere else in the framework.
+
+### 9.1 The prompt
+
+```
+You are grading one LLM response for an evaluation. You produce two
+independent scores: an ANSWER score (how well the answer matches the
+rubric) and a METACOGNITION score (how well the student's chosen skill
+matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score
+each axis independently, and you do NOT let your judgment of one axis
+bleed into the other. A student can have a correct answer with a wrong
+skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+<student-facing task prompt, copied from tasks/<cart>.json>
+
+EXPECTED ANSWER:
+<canonical correct answer from tasks/<cart>.json>
+
+RUBRIC:
+- pass: <rubric.pass criterion>
+- partial: <rubric.partial criterion>
+- fail: <rubric.fail criterion>
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- <uid>: <name> — <one-line definition>
+- <uid>: <name> — <one-line definition>
+  (one line per skill_uid the task is tagged with)
+
+---
+
+STUDENT'S FULL RESPONSE:
+<the full "response" field from the student-output JSON, including the
+ 4-part SKILL_CANDIDATES / SKILL_CHOSEN / RATIONALE / ANSWER structure>
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the
+expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element
+  rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the
+catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the
+  catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less
+  specific (e.g., "trace variables" when the catalog skill is
+  "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so
+  vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "<the task UID>",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}
+```
+
+### 9.2 Operational notes
+
+- **One fresh Claude chat per task.** Grading independence matters more here than anywhere else; the verdict is the primary output of the entire framework.
+- **Temperature 0 for grading.** Verdicts should be reproducible.
+- **The grading prompt is automatically assembled** by `scripts/build_grading_prompts.py`, which reads `tasks/<cart>.json`, `extraction/raw/skills_raw.jsonl`, and the student output files, and writes one ready-to-paste `.txt` file per task into `runs/<model_label>/grading_prompts/`. The grader user copy-pastes each `.txt` into a fresh Claude chat and saves the returned JSON to `runs/<model_label>/grades/<task_uid>.json`.
+
+### 9.3 Verdict schema
+
+Each grade file is a single JSON object:
+
+```json
+{
+  "task_uid": "8786-02d4-344e-0913",
+  "answer_score": "pass",
+  "metacog_score": "match",
+  "answer_rationale": "The student correctly identifies that `platform` is a hardcoded OR expression of specific hero.y values, satisfying both rubric.pass requirements.",
+  "metacog_rationale": "'Evaluate hardcoded condition logic' maps clearly onto the catalog skill of spotting a hardcoded platform table."
+}
+```
+
+Both rationale fields are required. They are not used to compute the grid colors (only the score fields are), but they preserve the grader's reasoning for audit and for spot-checking when a verdict looks anomalous.
+
+### 9.4 What the grader is not
+
+The grader is not a tie-breaker for ambiguous tasks. If the rubric is unclear, the right move is to revise the rubric in `tasks/<cart>.json` and re-grade, not to ask the grader to interpret. The grading prompt assumes the rubric is the source of truth.
+
+The grader is also not a writer. Rationale fields should be 1-2 sentences, citing specific tokens from the student's response or the rubric. Long rationales are a sign the rubric is too vague.
