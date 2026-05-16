@@ -15,7 +15,7 @@ are licensed under non-commercial terms.
 
 - **Title:** Bootyful Demake
 - **Author:** nate2squared
-- **Source:** https://www.lexaloffle.com/bbs/?pid=39115
+- **Source:** https://github.com/nateProjects/Bootyful-Demake/blob/master/booty-demake.p8
 - **License:** CC-BY-NC-SA-4.0 (Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International)
 - **Original publish date:** 2017-04-01
 - **Cart version date:** 2025-06-07
