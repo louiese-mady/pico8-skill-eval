@@ -1,0 +1,58 @@
+You are grading one LLM response for an evaluation. You produce two independent scores: an ANSWER score (how well the answer matches the rubric) and a METACOGNITION score (how well the student's chosen skill matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score each axis independently, and you do NOT let your judgment of one axis bleed into the other. A student can have a correct answer with a wrong skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+Which function in this cart is the per-frame render routine for in-game play (as opposed to the title, death, win, or help screens), and what two early calls distinguish it as the gameplay draw routine?
+
+EXPECTED ANSWER:
+`gamedraw()` is the gameplay render routine. It is identified by starting with `cls()` followed immediately by `map(levels[hero.lvl][6], levels[hero.lvl][7], 0, 0, 16, 13)` to draw the level map. It is dispatched from `_draw()` as the default (else) branch when mode is not 0/9/6/3.
+
+RUBRIC:
+- pass: Names `gamedraw` and cites cls() + map() as the identifying early calls.
+- partial: Names `gamedraw` but cites only one of the two calls, or names it without justification.
+- fail: Names a different function (e.g., titledraw, _draw, objects).
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- de78-5cac-e82d-a324: identify_draw_callback_function — Recognizes gamedraw as the per-frame render routine by spotting cls() followed by map() and sprite draws.
+
+---
+
+STUDENT'S FULL RESPONSE:
+SKILL_CANDIDATES:
+- identify main game loop structure
+- trace rendering path from _draw function
+- compare screen mode conditions in _draw
+
+SKILL_CHOSEN: trace rendering path from _draw function
+
+RATIONALE: This question asks for the specific in-game render routine and distinguishing calls, which requires following the execution flow from the main _draw function to determine which function is invoked during gameplay.
+
+ANSWER:
+The per-frame render routine for in-game play is `gamedraw()`. This is evident from the `_draw()` function, which uses a conditional chain based on the `mode` variable and calls `gamedraw()` when `mode` is not 0 (title), 9 (death), 6 (win), or 3 (help). Two early calls in `gamedraw()` that distinguish it as the gameplay draw routine are: `cls()` to clear the screen and `map(levels[hero.lvl][6],levels[hero.lvl][7],0,0,16,13)` to draw the current level map — both are foundational operations specific to rendering the active game world.
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less specific (e.g., "trace variables" when the catalog skill is "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "32ff-c1b9-fa8b-d435",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}

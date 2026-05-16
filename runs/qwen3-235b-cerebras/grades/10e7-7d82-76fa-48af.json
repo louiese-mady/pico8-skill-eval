@@ -1,0 +1,7 @@
+{
+  "task_uid": "10e7-7d82-76fa-48af",
+  "answer_score": "fail",
+  "metacog_score": "near_match",
+  "answer_rationale": "The student correctly traces the death-trigger and fall() invocation flow, but then contradicts themselves: they first note the bug (second assignment should be hero.y) but then state hero.x ends up at levels[hero.lvl][11] and that hero.y was set to the x-value. In reality, both assignments are to hero.x, so hero.x ends up at levels[hero.lvl][12] (the second assignment overwrites the first) and hero.y is never touched. This misidentifies the final state, matching rubric.fail's 'claims the code correctly restores both x and y' in spirit.",
+  "metacog_rationale": "'Simulate frame-by-frame state changes' is in the right family as the death-condition/respawn tracing skills but is more generic than either specific catalog skill."
+}

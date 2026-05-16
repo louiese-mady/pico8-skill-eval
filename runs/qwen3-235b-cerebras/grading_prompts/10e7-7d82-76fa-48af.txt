@@ -1,0 +1,59 @@
+You are grading one LLM response for an evaluation. You produce two independent scores: an ANSWER score (how well the answer matches the rubric) and a METACOGNITION score (how well the student's chosen skill matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score each axis independently, and you do NOT let your judgment of one axis bleed into the other. A student can have a correct answer with a wrong skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+Suppose during a frame the collision() function computes `floor_tile_below == 0`, `tempon == false`, and `climb == false`, and at that moment `hero.death` is already `false`. Trace what happens to `hero.death` on this frame and then on the next frame when fall() runs from gamedraw(). What value does hero.x end up at after fall() completes, and is that what the developer intended?
+
+EXPECTED ANSWER:
+On this frame, collision() sets hero.death = true (all three predicates trigger the death branch). On the next gamedraw() call, since hero.death == true, fall() is invoked instead of drawing the hero. Inside fall(), sfx(10) plays, wait(1) pauses, hero.lives is decremented, and then hero.x is assigned levels[hero.lvl][11] and immediately overwritten with levels[hero.lvl][12]. So hero.x ends up equal to levels[hero.lvl][12] and hero.y is never reset. This is a copy-paste bug: the second line should have been `hero.y = levels[hero.lvl][12]`, restoring the spawn y instead of clobbering spawn x.
+
+RUBRIC:
+- pass: Traces collision() setting hero.death=true, fall() running from gamedraw(), AND identifies that hero.x is assigned twice with hero.y never restored (the bug) â€” naming the intended fix (hero.y = ...[12]).
+- partial: Gets the death-triggering and fall-call flow right but misses the duplicate-assignment bug, OR spots the bug without tracing the control flow.
+- fail: Misidentifies the trigger conditions, or claims the code correctly restores both x and y.
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- f3ea-5589-2f40-11d5: infer_falling_death_condition — Combines three predicates â€” no floor tile, no fading platform on, and not climbing â€” to recognize the death trigger.
+- fafd-15aa-2740-28c7: spot_buggy_respawn_assignment — Notices that fall() assigns hero.x twice instead of restoring hero.y, recognizing it as a copy-paste bug.
+
+---
+
+STUDENT'S FULL RESPONSE:
+SKILL_CANDIDATES:
+- trace variable across functions
+- analyze conditional execution flow
+- simulate frame-by-frame state changes
+
+SKILL_CHOINED: simulate frame-by-frame state changes
+
+RATIONALE: This question asks about the precise evolution of `hero.death` and `hero.x` across two consecutive frames involving `collision()` and `fall()`, which requires stepping through the code as it would execute in sequence, tracking state changes over time.
+
+ANSWER:
+On the current frame, `collision()` detects `floor_tile_below == 0`, `tempon == false`, and `climb == false`, and since `hero.death == false`, it sets `hero.death = true`. The `fall()` function is not called during this frame — it is only invoked later in `gamedraw()` if `hero.death == true`. However, in the current frame, `fall()` has not yet run. On the next frame, during `gamedraw()`, since `hero.death == true`, `fall()` is called. Inside `fall()`, it checks `if hero.death == true`, which is now the case, so it plays sfx(10), calls `wait(1)`, decrements `hero.lives` by 1, and resets `hero.x = levels[hero.lvl][11]` and `hero.y = levels[hero.lvl][12]` (note: there is a bug — the second assignment should be `hero.y`, but the code mistakenly repeats `hero.x`). Then it sets `hero.death = false`. Therefore, after `fall()` completes, `hero.x` ends up at `levels[hero.lvl][11]`, but `hero.y` is incorrectly set to `levels[hero.lvl][11]` instead of `levels[hero.lvl][12]` due to the typo. This is **not** what the developer intended — the duplication of `hero.x=` instead of setting `hero.y` is clearly a bug, as evidenced by the correct initialization in `gameinit()` and other level transitions. The intended behavior is to respawn the hero at their level's starting position `(levels[hero.lvl][11], levels[hero.lvl][12])`, but due to the typo, the y-coordinate is incorrectly set to the x-coordinate value, which could place the hero at an invalid or unintended location.
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less specific (e.g., "trace variables" when the catalog skill is "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "10e7-7d82-76fa-48af",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}

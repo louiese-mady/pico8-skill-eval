@@ -1,0 +1,7 @@
+{
+  "task_uid": "e76c-22d4-85d8-e1c0",
+  "answer_score": "pass",
+  "metacog_score": "match",
+  "answer_rationale": "Student correctly identifies two distinct cheat indices (cheat[2]==0 gating pirate draw/update/collision, and cheat[6]==1 gating alt-ladder rendering and fading platform behavior) with correct on-values and specific function-location citations matching the expected answer.",
+  "metacog_rationale": "'Trace variable across functions' maps directly onto the catalog skill 'trace_cheat_flag_branches', which is precisely about following cheat[] usage across rendering and behavior branches."
+}

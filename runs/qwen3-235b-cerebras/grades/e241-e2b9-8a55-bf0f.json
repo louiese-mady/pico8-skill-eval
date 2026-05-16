@@ -1,0 +1,7 @@
+{
+  "task_uid": "e241-e2b9-8a55-bf0f",
+  "answer_score": "partial",
+  "metacog_score": "match",
+  "answer_rationale": "The student correctly identifies that `trap` is overwritten on every iteration and connects it to the collision() bomb check, but misses the key point that this loop runs every frame, so `trap` is recomputed per frame making the bomb target unstable across frames (not just determined by loop order once). They actually contradict the correct answer by saying 'only one random treasure slot—determined last—can ever be the bomb.'",
+  "metacog_rationale": "The chosen skill 'identify unintended side effects of random number usage' maps reasonably onto the catalog skill about recognizing trap being overwritten and bomb selection being unstable due to randomness in the loop."
+}

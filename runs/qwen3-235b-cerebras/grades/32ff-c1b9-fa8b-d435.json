@@ -1,0 +1,7 @@
+{
+  "task_uid": "32ff-c1b9-fa8b-d435",
+  "answer_score": "pass",
+  "metacog_score": "match",
+  "answer_rationale": "The student correctly names gamedraw() and cites both cls() and the map() call with the exact arguments as the distinguishing early calls, also correctly explaining the _draw() dispatch logic.",
+  "metacog_rationale": "Tracing the rendering path from _draw to identify the gameplay draw routine maps directly onto the catalog skill of recognizing gamedraw as the per-frame render routine."
+}

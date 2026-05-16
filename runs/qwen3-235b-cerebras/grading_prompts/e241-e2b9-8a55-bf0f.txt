@@ -1,0 +1,58 @@
+You are grading one LLM response for an evaluation. You produce two independent scores: an ANSWER score (how well the answer matches the rubric) and a METACOGNITION score (how well the student's chosen skill matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score each axis independently, and you do NOT let your judgment of one axis bleed into the other. A student can have a correct answer with a wrong skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+Examine the `for items` loop in objects() that places treasures. The variable `trap` is assigned via `trap = rnd(levels[hero.lvl][2])` inside this loop. What is the practical consequence of placing this assignment inside the loop rather than after it (or once per level), given how `trap` is consulted later in collision()?
+
+EXPECTED ANSWER:
+Because `trap` is reassigned every iteration of the per-frame items loop, its final value is whatever the last iteration randomly produced â€” and that value is recomputed every frame. So which treasure is the 'bomb' changes every frame (effectively, randomly redrawn each tick). In collision(), the check `if trap==onum then bomb(trap) end` therefore tests against a constantly shifting target rather than a stable per-level designated trap. The designation is effectively unstable: pickup-time the player has a roughly 1-in-N chance of any given treasure happening to be the trap at that frame, instead of one fixed treasure being the trap for the whole level.
+
+RUBRIC:
+- pass: Notes that `trap` is overwritten every frame (and every loop iteration), making the bomb target unstable/random per frame, and connects that to the collision check using it.
+- partial: Notes the per-iteration reassignment without connecting it to the collision check behavior, or vice versa.
+- fail: Claims `trap` is stable per level, or misidentifies what gets reassigned.
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- 6539-1f80-036d-9dd4: identify_random_trap_assignment — Recognizes that trap is overwritten every frame inside the items loop, making the bomb selection effectively unstable.
+
+---
+
+STUDENT'S FULL RESPONSE:
+SKILL_CANDIDATES:
+- trace variable assignment and scope across loops
+- identify unintended side effects of random number usage
+- analyze timing of variable updates in game loops
+
+SKILL_CHOSEN: identify unintended side effects of random number usage
+
+RATIONALE: The question centers on how repeatedly reassigning `trap` with `rnd` inside a loop leads to incorrect or inconsistent behavior when that variable is later used to trigger a bomb, making the focus the consequence of misusing randomness within iteration.
+
+ANSWER:
+The practical consequence of assigning `trap = rnd(levels[hero.lvl][2])` inside the `for items` loop in `objects()` is that `trap` gets overwritten on every iteration, meaning only the last random value assigned (during the final loop pass) will be retained. Since `trap` is later used in `collision()` to check if a collected treasure triggers a bomb, this means only one random treasure slot—determined last—can ever be the bomb, and it changes unpredictably based on loop order. Furthermore, because `rnd()` returns a float and array indices require integers, using `flr(rnd(...))` or similar is needed for correctness, but even then, placing the assignment inside the loop instead of once per level causes unnecessary repeated calls and logic errors in bomb assignment. The correct behavior would be to set `trap` once per level initialization, not once per treasure item.
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less specific (e.g., "trace variables" when the catalog skill is "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "e241-e2b9-8a55-bf0f",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}

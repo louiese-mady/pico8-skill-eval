@@ -1,0 +1,7 @@
+{
+  "task_uid": "8786-02d4-344e-0913",
+  "answer_score": "pass",
+  "metacog_score": "match",
+  "answer_rationale": "The student correctly identifies that `platform` is a hardcoded OR expression of specific hero.y values (citing 8, 32, 56) and explicitly contrasts this with dynamic calculation from map data or tile properties, satisfying both rubric.pass requirements.",
+  "metacog_rationale": "'Evaluate hardcoded condition logic' maps clearly onto the catalog skill of spotting a hardcoded platform table via a literal disjunction."
+}

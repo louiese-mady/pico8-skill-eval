@@ -1,0 +1,114 @@
+{
+  "chunk_id": "bootyful_demake.p8 :: whole_cart",
+  "skills": [
+    {
+      "name": "identify_state_machine_dispatch",
+      "definition": "The reader recognizes that _draw and _update branch on a numeric mode variable to route between title, game, death, win, and help screens.",
+      "evidence": "_draw and _update functions dispatch on mode==0/3/6/9 to different draw/update pairs",
+      "k_level": 2
+    },
+    {
+      "name": "decode_level_array_indices",
+      "definition": "The reader interprets the unnamed positional fields of levels[hero.lvl][n] (e.g. [2]=treasure count, [5]=pirate count, [6][7]=map offset, [10]=fading platform count, [11][12]=spawn) by cross-referencing how each index is used.",
+      "evidence": "levels[hero.lvl][6],[7] used as map() offsets in gamedraw; [11][12] as respawn coords in fall()",
+      "k_level": 3
+    },
+    {
+      "name": "trace_map_coordinate_offset",
+      "definition": "The reader follows how world coordinates are converted to map-tile lookups by adding levels[hero.lvl][6]*8 and [7]*8 to hero.x/hero.y before fget/mget.",
+      "evidence": "tile_at calls in collision() add levels[hero.lvl][6]*8 and [7]*8 to x,y",
+      "k_level": 2
+    },
+    {
+      "name": "recognize_sprite_flag_encoding",
+      "definition": "The reader infers that fget/mget tile values in specific numeric ranges (60–69 doors, 34–44 treasure, 21–29 keys, ==2 ladder) encode object identity through flag arithmetic.",
+      "evidence": "collision() branches on behind>=34 and behind<=44, topleft>=60 and topleft<=69, tile_at==2",
+      "k_level": 3
+    },
+    {
+      "name": "infer_directional_facing_flag",
+      "definition": "The reader determines that hero.dr and pilocate[...][3] booleans encode left/right facing and are passed as the flip-x argument to spr().",
+      "evidence": "hero.dr set in btn(0)/btn(1) branches, used in spr(hero.sp,...,hero.dr); pilocate[...][3] toggled at edges",
+      "k_level": 2
+    },
+    {
+      "name": "parse_animation_cycle_pattern",
+      "definition": "The reader recognizes the move() helper increments hero.sp until it exceeds sprite+hero.ani then wraps, producing a sprite-cycling walk animation tied to movement.",
+      "evidence": "move(sprite) function and its mirror enemy_move(pisprite)",
+      "k_level": 1
+    },
+    {
+      "name": "detect_hardcoded_platform_heights",
+      "definition": "The reader spots that the platform check is a long disjunction of specific hero.y constants (8, 32, 56, …) instead of a tile-based query, and understands this constrains level geometry.",
+      "evidence": "platform = hero.y==8 or hero.y==32 or hero.y==56 ... in collision()",
+      "k_level": 1
+    },
+    {
+      "name": "trace_riding_platform_offset",
+      "definition": "The reader follows the hero.ron/hero.rx scheme where the player's position is computed as platform_x - rx so that holding left/right adjusts the offset rather than the absolute position.",
+      "evidence": "hero.x=travs[hero.lvl][1][1]-hero.rx in gamedraw; hero.rx+=1/-=1 in gameupdate movement branches",
+      "k_level": 3
+    },
+    {
+      "name": "decode_door_key_pairing",
+      "definition": "The reader works out that door sprite N and key sprite N share an index derived as topleft-59 / behind-20, and hero.keyheld must match dnum for deldoor() to fire.",
+      "evidence": "dnum=(topleft-59) and hero.keyheld==topleft-59 check in collision()",
+      "k_level": 3
+    },
+    {
+      "name": "infer_fading_platform_timing",
+      "definition": "The reader interprets the time() % fadewait modulo logic toggling tempon true/false based on the longest platform width on the current level.",
+      "evidence": "fadewait=2+(maxwidth-3) and time() % fadewait / time() % (fadewait*2) in gameupdate",
+      "k_level": 3
+    },
+    {
+      "name": "locate_exit_trigger_logic",
+      "definition": "The reader spots that an exit is recognized when behind==192 (sky tile flag) and the player's x/y falls within ±7 of an exits[] entry, with btnp(5) confirming the transition.",
+      "evidence": "if (behind==192) block in stats() iterating exits[hero.lvl]",
+      "k_level": 2
+    },
+    {
+      "name": "trace_cheat_flag_gating",
+      "definition": "The reader notes that cheat[2], cheat[3], cheat[5], cheat[6] gate enemy drawing, key placement, level-skipping, and ladder/travelator alternatives respectively.",
+      "evidence": "if cheat[2]==0 then ... enemy_update(); if cheat[5]==1 ... hero.lvl+=1; if cheat[6]==1 ... alt ladders",
+      "k_level": 2
+    },
+    {
+      "name": "identify_collision_corner_sampling",
+      "definition": "The reader recognizes that collision() probes specific corner offsets (top-left at x,y-1; top-right at x+w/2,y-8; floor_below at x,y+h) rather than the whole bounding box.",
+      "evidence": "topleft, topright, floor_below, ladder_d, ladder_u tile_at calls in collision()",
+      "k_level": 2
+    },
+    {
+      "name": "spot_pirate_gap_avoidance",
+      "definition": "The reader follows how pirates flip direction when their x aligns with templatforms gapleft/gapright edges on a matching y, simulating gap avoidance.",
+      "evidence": "for platloop loop inside enemy_update() comparing pix to gapright/gapleft",
+      "k_level": 3
+    },
+    {
+      "name": "match_init_update_draw_triad",
+      "definition": "The reader maps the PICO-8 lifecycle by locating _init calling titleinit(), and _update/_draw delegating to mode-specific update/draw pairs.",
+      "evidence": "_init at bottom calls titleinit(); _update and _draw branch by mode",
+      "k_level": 1
+    },
+    {
+      "name": "detect_dead_defunct_code",
+      "definition": "The reader notices comments like 'defunct' and 'fixme' marking the travelator/lift systems as legacy code that still runs but is shadowed by the fading-platform replacement.",
+      "evidence": "comments 'draw travelators if present - defunct' and 'move lifts - defunct' wrapping travs/lifts loops",
+      "k_level": 1
+    },
+    {
+      "name": "trace_respawn_coordinate_bug",
+      "definition": "The reader spots that fall() assigns hero.x=levels[hero.lvl][11] then immediately overwrites hero.x=levels[hero.lvl][12], so the y-respawn never lands in hero.y.",
+      "evidence": "fall() function: hero.x=levels[hero.lvl][11]; hero.x=levels[hero.lvl][12]",
+      "k_level": 2
+    },
+    {
+      "name": "recognize_centered_text_helper",
+      "definition": "The reader interprets centre_print(strtxt,py) as computing 64-(#strtxt*2) to horizontally center text on the 128-wide screen given 4-pixel glyph width.",
+      "evidence": "function centre_print(strtxt,py) print(strtxt,64-(#strtxt*2),py)",
+      "k_level": 1
+    }
+  ],
+  "chunk_summary": "A complete PICO-8 platformer cart implementing a Manic Miner / Jet Set Willy style demake with mode-switched title/help/game/death/win screens, tile-flag-driven collision for ladders/doors/keys/treasure/exits, animated pirates with gap-avoidance, timed fading platforms, and a partly-abandoned travelator/lift subsystem."
+}

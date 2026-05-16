@@ -1,0 +1,7 @@
+{
+  "task_uid": "11d8-e7d6-3068-ed2e",
+  "answer_score": "pass",
+  "metacog_score": "match",
+  "answer_rationale": "The answer correctly identifies [6] and [7] as the level's map-region pixel offsets (tile units scaled by 8) and explains that without them tile_at would read from the wrong region of the map (origin instead of the level's positioned area), causing incorrect collision detection for ladders, doors, and floors.",
+  "metacog_rationale": "'Decode coordinate transformation logic' maps clearly onto the catalog skill of translating per-level world offsets to hero coordinates before tile lookups."
+}

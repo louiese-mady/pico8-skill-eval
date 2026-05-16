@@ -1,0 +1,7 @@
+{
+  "task_uid": "3ec5-0acb-1546-a227",
+  "answer_score": "pass",
+  "metacog_score": "match",
+  "answer_rationale": "Student correctly identifies topleft as detector, gives dnum=topleft-59 and dsprite=topleft-55, identifies the keyheld==dnum check, and lists all 7 deldoor side effects including the three mset calls and key consumption. Minor error: says doors[...][3]=0 means 'open' when expected is =2 marking key used (actually the =2 is for keydb, and student's doors[...][3]=0 matches expected), so all rubric pass criteria are met.",
+  "metacog_rationale": "'Decode tile flag arithmetic' maps clearly onto the catalog skill 'match_door_tile_range' which is about the tile-59 arithmetic mapping flags to door numbers."
+}

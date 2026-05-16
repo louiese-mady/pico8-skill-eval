@@ -1,0 +1,161 @@
+{
+  "cart_uid": "9383-5f6e-8fd0-eaea",
+  "tasks": [
+    {
+      "task_uid": "8786-02d4-344e-0913",
+      "prompt": "In the collision() function, the variable `platform` is assigned a boolean value. How is its truth determined, and what does this reveal about how the developer decided which y-coordinates count as standing on a platform?",
+      "expected_answer": "`platform` is set to a literal disjunction of hard-coded hero.y values: hero.y==8 or 32 or 56 or 80 or 136 or 160 or 184 or 208 or 264 or 288 or 312 or 336. It is not derived from any tile lookup or grid math \u00e2\u20ac\u201d it is a hand-picked list of exact y values. The comment 'dumb way fixme - but it worked - fix later?' confirms this is an ad-hoc hardcoded table rather than a computed grid alignment.",
+      "rubric": {
+        "pass": "Identifies that `platform` is a literal `or` chain of specific hero.y constants (not all values needed, but must name it as a hardcoded list) AND notes it is not a computed/grid-aligned check.",
+        "partial": "Identifies the disjunction of y values but misses that this is hardcoded/non-computed, or vice versa.",
+        "fail": "Claims `platform` is computed from tile lookups, fget/mget, or a formula on hero.y."
+      },
+      "skill_uids": [
+        "dd6e-bc28-22dd-170d"
+      ],
+      "task_type": "localization",
+      "k_level": 1
+    },
+    {
+      "task_uid": "32ff-c1b9-fa8b-d435",
+      "prompt": "Which function in this cart is the per-frame render routine for in-game play (as opposed to the title, death, win, or help screens), and what two early calls distinguish it as the gameplay draw routine?",
+      "expected_answer": "`gamedraw()` is the gameplay render routine. It is identified by starting with `cls()` followed immediately by `map(levels[hero.lvl][6], levels[hero.lvl][7], 0, 0, 16, 13)` to draw the level map. It is dispatched from `_draw()` as the default (else) branch when mode is not 0/9/6/3.",
+      "rubric": {
+        "pass": "Names `gamedraw` and cites cls() + map() as the identifying early calls.",
+        "partial": "Names `gamedraw` but cites only one of the two calls, or names it without justification.",
+        "fail": "Names a different function (e.g., titledraw, _draw, objects)."
+      },
+      "skill_uids": [
+        "de78-5cac-e82d-a324"
+      ],
+      "task_type": "localization",
+      "k_level": 1
+    },
+    {
+      "task_uid": "61e0-c6e6-ebcd-54e8",
+      "prompt": "Find the shuffle() function. What standard algorithmic idiom does the line `items[rand1], items[rand2] = items[rand2], items[rand1]` implement, and why is the surrounding loop a shuffle rather than a sort?",
+      "expected_answer": "The line uses Lua's multi-assignment to swap two array elements in a single statement \u00e2\u20ac\u201d the classic in-place swap idiom. The surrounding loop picks two random indices rand1 and rand2 (via flr(rnd(num)+1)) each iteration and swaps them, producing a Fisher-Yates-style (random-pair) shuffle. There is no comparison, so it cannot be a sort \u00e2\u20ac\u201d it just randomly permutes items.",
+      "rubric": {
+        "pass": "Identifies it as a swap via Lua multi-assignment AND recognizes the loop as a (Fisher-Yates-style) random shuffle, noting absence of comparisons.",
+        "partial": "Identifies the swap but does not connect it to shuffling, or calls it a shuffle without explaining the swap mechanic.",
+        "fail": "Misidentifies the construct (e.g., calls it a sort, an assignment to a tuple, or a copy)."
+      },
+      "skill_uids": [
+        "78be-627d-2d75-273b"
+      ],
+      "task_type": "localization",
+      "k_level": 1
+    },
+    {
+      "task_uid": "10e7-7d82-76fa-48af",
+      "prompt": "Suppose during a frame the collision() function computes `floor_tile_below == 0`, `tempon == false`, and `climb == false`, and at that moment `hero.death` is already `false`. Trace what happens to `hero.death` on this frame and then on the next frame when fall() runs from gamedraw(). What value does hero.x end up at after fall() completes, and is that what the developer intended?",
+      "expected_answer": "On this frame, collision() sets hero.death = true (all three predicates trigger the death branch). On the next gamedraw() call, since hero.death == true, fall() is invoked instead of drawing the hero. Inside fall(), sfx(10) plays, wait(1) pauses, hero.lives is decremented, and then hero.x is assigned levels[hero.lvl][11] and immediately overwritten with levels[hero.lvl][12]. So hero.x ends up equal to levels[hero.lvl][12] and hero.y is never reset. This is a copy-paste bug: the second line should have been `hero.y = levels[hero.lvl][12]`, restoring the spawn y instead of clobbering spawn x.",
+      "rubric": {
+        "pass": "Traces collision() setting hero.death=true, fall() running from gamedraw(), AND identifies that hero.x is assigned twice with hero.y never restored (the bug) \u00e2\u20ac\u201d naming the intended fix (hero.y = ...[12]).",
+        "partial": "Gets the death-triggering and fall-call flow right but misses the duplicate-assignment bug, OR spots the bug without tracing the control flow.",
+        "fail": "Misidentifies the trigger conditions, or claims the code correctly restores both x and y."
+      },
+      "skill_uids": [
+        "f3ea-5589-2f40-11d5",
+        "fafd-15aa-2740-28c7"
+      ],
+      "task_type": "tracing",
+      "k_level": 2
+    },
+    {
+      "task_uid": "40ab-26c7-2759-c764",
+      "prompt": "Walk through what happens in collision() when `behind` equals 25 (i.e., the hero steps onto a key tile) and the hero is currently holding key number 3 whose keydb status is not 2. List each mutation made to game state (in order), including what happens to the previously held key and what hero.keyheld becomes.",
+      "expected_answer": "behind==25 falls into the (behind>=21 and behind<=29) key branch. Order of mutations:\n1. knum = 25 - 20 = 5 (the new key index).\n2. The condition `not (hero.keyheld==0 or keydb[hero.lvl][hero.keyheld][3]==2)` is true (keyheld==3, status not 2), so keydb[hero.lvl][3][3] = 1 \u00e2\u20ac\u201d the previously held key 3 is marked back to unheld/available.\n3. keydb[hero.lvl][5][3] = 0 \u00e2\u20ac\u201d the new key 5 is marked unavailable (picked up).\n4. fset(behind, 0) \u00e2\u20ac\u201d clear the tile's flag.\n5. mset on (keydb[hero.lvl][5][1], keydb[hero.lvl][5][2]) and the tile below \u00e2\u20ac\u201d erase the key's two map tiles.\n6. hero.keyheld = 5 \u00e2\u20ac\u201d the new key becomes the held key.\nNet result: old key 3 returned to status 1 (available again on the map for re-pickup), key 5 consumed from map, hero.keyheld swapped from 3 to 5.",
+      "rubric": {
+        "pass": "Correctly orders the mutations: previously-held key (3) gets keydb status set to 1, new key (5) gets status 0, tile cleared via fset/mset, then hero.keyheld is reassigned to 5. Must show the old-key write happens BEFORE hero.keyheld is overwritten.",
+        "partial": "Gets the swap idea right but errors on order, or omits one of the key keydb writes / the hero.keyheld reassignment.",
+        "fail": "Claims hero.keyheld is overwritten before the old key's status is preserved, or misidentifies knum, or skips the keydb mutations entirely."
+      },
+      "skill_uids": [
+        "7fd6-c891-6180-8c11",
+        "49ad-9b02-99a3-eb5b"
+      ],
+      "task_type": "tracing",
+      "k_level": 2
+    },
+    {
+      "task_uid": "11d8-e7d6-3068-ed2e",
+      "prompt": "In collision(), the variables topleft, topright, floor_tile_below, ladder_d, ladder_u, and behind all call tile_at() with hero.x and hero.y plus extra terms. What is the role of the `levels[hero.lvl][6]*8` and `levels[hero.lvl][7]*8` additions, and what would go wrong if you removed them?",
+      "expected_answer": "levels[hero.lvl][6] and levels[hero.lvl][7] are the level's map-origin cell offsets (in tiles); multiplying by 8 converts them to pixel offsets. Adding these to hero.x and hero.y translates the hero's screen-space coordinates into world/map-space coordinates before tile_at calls mget. Without these additions, tile_at(flr(x/8), flr(y/8)) would look up tiles from the top-left of the map sheet rather than from wherever the current level's chunk lives on the map. The hero would collide against the wrong level's geometry (or empty tiles), and doors, ladders, treasures, and floor checks would all become incorrect.",
+      "rubric": {
+        "pass": "Identifies [6] and [7] as the level's map-region origin (in tile units, scaled by 8 to pixels) AND explains the lookup would read from the wrong region of the map without them.",
+        "partial": "Identifies them as level-related offsets but doesn't explain the world-to-map translation, OR explains the consequence without naming what [6]/[7] represent.",
+        "fail": "Misidentifies the constants (e.g., as hero size, scroll speed, or platform width)."
+      },
+      "skill_uids": [
+        "4e5d-c9c4-c4a0-6063"
+      ],
+      "task_type": "tracing",
+      "k_level": 1
+    },
+    {
+      "task_uid": "e241-e2b9-8a55-bf0f",
+      "prompt": "Examine the `for items` loop in objects() that places treasures. The variable `trap` is assigned via `trap = rnd(levels[hero.lvl][2])` inside this loop. What is the practical consequence of placing this assignment inside the loop rather than after it (or once per level), given how `trap` is consulted later in collision()?",
+      "expected_answer": "Because `trap` is reassigned every iteration of the per-frame items loop, its final value is whatever the last iteration randomly produced \u00e2\u20ac\u201d and that value is recomputed every frame. So which treasure is the 'bomb' changes every frame (effectively, randomly redrawn each tick). In collision(), the check `if trap==onum then bomb(trap) end` therefore tests against a constantly shifting target rather than a stable per-level designated trap. The designation is effectively unstable: pickup-time the player has a roughly 1-in-N chance of any given treasure happening to be the trap at that frame, instead of one fixed treasure being the trap for the whole level.",
+      "rubric": {
+        "pass": "Notes that `trap` is overwritten every frame (and every loop iteration), making the bomb target unstable/random per frame, and connects that to the collision check using it.",
+        "partial": "Notes the per-iteration reassignment without connecting it to the collision check behavior, or vice versa.",
+        "fail": "Claims `trap` is stable per level, or misidentifies what gets reassigned."
+      },
+      "skill_uids": [
+        "6539-1f80-036d-9dd4"
+      ],
+      "task_type": "inference",
+      "k_level": 1
+    },
+    {
+      "task_uid": "e234-a344-5ebc-41cc",
+      "prompt": "In gameupdate(), examine the block that computes `maxwidth`, then `fadewait`, then toggles `tempon` via `time() % fadewait`. Explain the developer's reasoning: why does the longest fading-platform width on the level determine the on/off cadence, and what is the relationship between `fadewait` (on cycle) and `fademax` (off cycle)?",
+      "expected_answer": "The loop scans templatforms[hero.lvl] to find the widest fading platform on the level (minimum 3) and stores it in maxwidth. fadewait is then set to 2 + (maxwidth - 3), so a wider longest platform \u00e2\u2020\u2019 longer wait. The intent is to give the player enough time to traverse the longest fading-platform span before it disappears: a 3-wide platform needs fadewait=2, a wider one needs more. Then `if (time() % fadewait)==0 then tempon=true` turns the platforms on at that cadence, and `fademax = fadewait*2` with `if (time() % (fadewait*2))==0 then tempon=false` turns them off at double the period \u00e2\u20ac\u201d so each on-phase lasts fadewait seconds and the off-phase coincides at the doubled boundary. The cycle scales with how long the player needs to cross.",
+      "rubric": {
+        "pass": "Explains maxwidth scans the level's longest fading platform, fadewait scales linearly from it (2 + maxwidth - 3), AND notes fademax = fadewait*2 produces the off-phase toggle at twice the on-period \u00e2\u20ac\u201d connecting cadence to traversal time.",
+        "partial": "Gets the maxwidth \u00e2\u2020\u2019 fadewait scaling right but misses the fadewait*2 off relationship, or vice versa.",
+        "fail": "Claims fadewait is constant, misidentifies what maxwidth measures, or inverts the on/off toggle logic."
+      },
+      "skill_uids": [
+        "8724-adff-c3ce-6f2a",
+        "5454-83b9-ba5d-a43b"
+      ],
+      "task_type": "inference",
+      "k_level": 2
+    },
+    {
+      "task_uid": "e76c-22d4-85d8-e1c0",
+      "prompt": "Look at how the cheat[] array is used across gamedraw(), gameupdate(), collision(), and objects(). Pick two specific cheat indices and describe, for each, what gameplay feature is gated and what game behavior changes when that cheat entry equals its 'on' value. Cite the variable index and condition for each.",
+      "expected_answer": "Reasonable answers include any two of:\n- cheat[2]==0 gates pirate behavior. In gamedraw(), pirates are only drawn `if cheat[2]==0`. In gameupdate(), `enemy_update()` is only called `if cheat[2]==0`. In collision(), pirate-hits-hero death checks are wrapped in `if cheat[2]==0`. So when cheat[2] != 0, pirates are invisible, frozen, and non-lethal.\n- cheat[3]==0 gates key/door placement in objects(): the entire key-placement and door-placement loops are inside `if cheat[3]==0`. Setting it to non-zero suppresses spawning keys and doors on the map.\n- cheat[5]==1 in gameupdate() enables level-skip: pressing btnp(4) increments hero.lvl (up to 19\u00e2\u2020\u201920) instead of restarting the current level's position.\n- cheat[6]==1 enables an alternate-ladder rendering path in gamedraw() (drawing extra ladders via altladders) and is also used in fading-platform draw, and the `not cheat[6]==1` guard appears around travelator/lift drawing and update in objects() and travel_update.\nStudent should pick TWO and cite the index + condition + behavior.",
+      "rubric": {
+        "pass": "Correctly identifies two distinct cheat[] indices, the comparison value used to enable them, AND a specific game behavior each gates with a code-location citation.",
+        "partial": "Identifies one cheat correctly with full detail, or two cheats but with vague or partly wrong behavior descriptions.",
+        "fail": "Gets indices or on/off comparisons wrong, or describes behaviors not actually gated by cheat[]."
+      },
+      "skill_uids": [
+        "9e86-e1d3-7020-1361",
+        "f5e0-171c-a16b-7b1d"
+      ],
+      "task_type": "inference",
+      "k_level": 2
+    },
+    {
+      "task_uid": "3ec5-0acb-1546-a227",
+      "prompt": "Consider what happens when the hero approaches a closed door tile from the left side, holding the matching key. Walk through (a) which collision variable detects the door, (b) how the door number is derived from the tile flag, (c) how the key match is checked, and (d) every distinct side effect of deldoor() that follows. Be specific about flag arithmetic and the three mset calls.",
+      "expected_answer": "(a) Approaching from the left, `topleft = tile_at(hero.x + levels[hero.lvl][6]*8, hero.y - 1 + levels[hero.lvl][7]*8)` reads the tile flag at the hero's top-left, and the branch `if not (topleft==0) and (topleft>=60 and topleft<=69)` fires for door tile flags 60\u00e2\u20ac\u201c69.\n\n(b) `dnum = topleft - 59` maps flag 60\u00e2\u20ac\u201c69 \u00e2\u2020\u2019 door number 1\u00e2\u20ac\u201c10, and `dsprite = topleft - 55` maps flag \u00e2\u2020\u2019 door sprite index (5\u00e2\u20ac\u201c14).\n\n(c) `if hero.keyheld == topleft - 59` \u00e2\u20ac\u201d i.e., hero.keyheld == dnum \u00e2\u20ac\u201d checks the key match. If matched, `keydb[hero.lvl][hero.keyheld][3] = 2` marks the key as 'used', then deldoor() is called. Otherwise `hero.x += 1` nudges the hero back (blocking entry).\n\n(d) deldoor() side effects, in order:\n1. sfx(13) \u00e2\u20ac\u201d plays unlock sound.\n2. fset(dsprite, 0) \u00e2\u20ac\u201d removes the door's tile flag.\n3. doors[hero.lvl][dnum][3] = 0 \u00e2\u20ac\u201d marks the door as opened in the doors table.\n4. mset(doors[hero.lvl][dnum][1], doors[hero.lvl][dnum][2], 1) \u00e2\u20ac\u201d overwrites top door tile with tile 1.\n5. mset(doors[hero.lvl][dnum][1], doors[hero.lvl][dnum][2]+1, 0) \u00e2\u20ac\u201d clears middle door tile.\n6. mset(doors[hero.lvl][dnum][1], doors[hero.lvl][dnum][2]+2, 0) \u00e2\u20ac\u201d clears bottom door tile.\n7. hero.keyheld = 0 \u00e2\u20ac\u201d consumes the key.",
+      "rubric": {
+        "pass": "Correctly names topleft as the detector, gives dnum=topleft-59 and dsprite=topleft-55, identifies the keyheld==dnum check, AND lists at least 5 of the 7 deldoor side effects (must include the three mset calls and key consumption).",
+        "partial": "Gets the detection and arithmetic right but misses 3+ deldoor side effects, or lists side effects without the flag arithmetic.",
+        "fail": "Misidentifies the detector variable, the arithmetic (e.g., dnum=topleft-60), or claims deldoor only does sound/keyheld with no map mutation."
+      },
+      "skill_uids": [
+        "118d-e4b2-9d76-85da",
+        "7161-0a33-5480-9dfa",
+        "4e5d-c9c4-c4a0-6063"
+      ],
+      "task_type": "tracing",
+      "k_level": 3
+    }
+  ]
+}

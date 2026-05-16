@@ -1,0 +1,7 @@
+{
+  "task_uid": "e234-a344-5ebc-41cc",
+  "answer_score": "pass",
+  "metacog_score": "near_match",
+  "answer_rationale": "The answer correctly identifies maxwidth as the longest fading platform, gives the exact formula fadewait = 2 + (maxwidth - 3) with the traversal-time rationale, and explains fademax = fadewait*2 with both modulo toggles. One minor mischaracterization (calling off-phase 'twice as long as on') doesn't undermine the core rubric requirements.",
+  "metacog_rationale": "'Analyze timing dependencies in game loops' captures the timing/modulo aspect of derive_fadewait_timing_formula but is less specific than the catalog skill's focus on deriving the formula from the width scan."
+}

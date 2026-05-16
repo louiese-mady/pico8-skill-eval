@@ -1,0 +1,59 @@
+You are grading one LLM response for an evaluation. You produce two independent scores: an ANSWER score (how well the answer matches the rubric) and a METACOGNITION score (how well the student's chosen skill matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score each axis independently, and you do NOT let your judgment of one axis bleed into the other. A student can have a correct answer with a wrong skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+In gameupdate(), examine the block that computes `maxwidth`, then `fadewait`, then toggles `tempon` via `time() % fadewait`. Explain the developer's reasoning: why does the longest fading-platform width on the level determine the on/off cadence, and what is the relationship between `fadewait` (on cycle) and `fademax` (off cycle)?
+
+EXPECTED ANSWER:
+The loop scans templatforms[hero.lvl] to find the widest fading platform on the level (minimum 3) and stores it in maxwidth. fadewait is then set to 2 + (maxwidth - 3), so a wider longest platform â†’ longer wait. The intent is to give the player enough time to traverse the longest fading-platform span before it disappears: a 3-wide platform needs fadewait=2, a wider one needs more. Then `if (time() % fadewait)==0 then tempon=true` turns the platforms on at that cadence, and `fademax = fadewait*2` with `if (time() % (fadewait*2))==0 then tempon=false` turns them off at double the period â€” so each on-phase lasts fadewait seconds and the off-phase coincides at the doubled boundary. The cycle scales with how long the player needs to cross.
+
+RUBRIC:
+- pass: Explains maxwidth scans the level's longest fading platform, fadewait scales linearly from it (2 + maxwidth - 3), AND notes fademax = fadewait*2 produces the off-phase toggle at twice the on-period â€” connecting cadence to traversal time.
+- partial: Gets the maxwidth â†’ fadewait scaling right but misses the fadewait*2 off relationship, or vice versa.
+- fail: Claims fadewait is constant, misidentifies what maxwidth measures, or inverts the on/off toggle logic.
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- 8724-adff-c3ce-6f2a: derive_fadewait_timing_formula — Works out how the longest platform width is scanned for and then used to compute fadewait and toggle tempon via time() modulo arithmetic.
+- 5454-83b9-ba5d-a43b: parse_fading_platform_loop — Reconstructs how a fading platform's span is drawn by stepping from platstart to platend in eight-pixel increments based on its width entry.
+
+---
+
+STUDENT'S FULL RESPONSE:
+SKILL_CANDIDATES:
+- analyze timing dependencies in game loops
+- trace variable propagation through conditional logic
+- interpret developer intent from code comments and structure
+
+SKILL_CHOSEN: analyze timing dependencies in game loops
+
+RATIONALE: This question specifically asks about the relationship between platform width, timing variables, and visual toggling behavior, which requires understanding how time-based conditions interact with level data in the game loop.
+
+ANSWER:
+The developer uses the longest fading platform width (`maxwidth`) to set `fadewait` (on duration) because wider platforms should remain visible longer to give the player enough time to cross them safely. The value `fadewait = 2 + (maxwidth - 3)` ensures that platforms of minimum width (3 tiles) stay on for 2 units of time, with longer platforms increasing this duration linearly. The off cycle is then set to `fademax = fadewait * 2`, meaning the platforms stay off for twice as long as they are on. This creates a rhythmic on/off cadence where visibility duration scales with platform length to maintain playability, while the longer off phase increases challenge and ensures clear visual contrast between states. The toggle via `time() % fadewait == 0` turns platforms on, and `time() % (fadewait * 2) == 0` turns them off, synchronizing the entire level's fading platforms to a unified, scalable timing cycle based on the most demanding platform.
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less specific (e.g., "trace variables" when the catalog skill is "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "e234-a344-5ebc-41cc",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}

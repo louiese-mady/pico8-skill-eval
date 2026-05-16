@@ -1,0 +1,7 @@
+{
+  "task_uid": "40ab-26c7-2759-c764",
+  "answer_score": "pass",
+  "metacog_score": "near_match",
+  "answer_rationale": "The student correctly identifies knum=5, shows the old key 3's keydb status being set to 1 BEFORE hero.keyheld is reassigned, sets new key 5's status to 0, performs fset/mset to clear tiles, and finally reassigns hero.keyheld=5 — matching the rubric.pass ordering requirements.",
+  "metacog_rationale": "'Simulate conditional execution flow' is in the right family (tracing branch execution) but less specific than the catalog's 'trace_key_state_swap', which names the exact swap-ordering concept being tested."
+}

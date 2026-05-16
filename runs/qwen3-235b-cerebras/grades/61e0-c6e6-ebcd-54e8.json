@@ -1,0 +1,7 @@
+{
+  "task_uid": "61e0-c6e6-ebcd-54e8",
+  "answer_score": "partial",
+  "metacog_score": "near_match",
+  "answer_rationale": "The student correctly identifies the swap and recognizes the loop as a random shuffle (noting absence of comparisons), but does not explicitly identify it as Lua's multi-assignment idiom or connect it to Fisher-Yates. The mechanic of the swap via tuple/multi-assignment is described only generically.",
+  "metacog_rationale": "'Identify algorithmic pattern in code' is in the right family but less specific than the catalog skill of spotting the shuffle swap idiom in particular."
+}

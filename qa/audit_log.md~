@@ -1,0 +1,164 @@
+# Audit Log
+
+Provenance, methodology decisions, and disagreements caught during the eval pipeline. One entry per event. Newest at the top.
+
+---
+
+## 2026-05-15 — v0.1 closed: 10/10 tasks graded, three grids rendered
+
+**Cart / Phase:** Bootyful Demake, full v0.1 closure
+
+**What happened:** Ran the grading prompt on all 10 student responses in 10 separate Claude chats. Collected verdicts as JSON. Rendered three matplotlib heatmaps. All deliverables present.
+
+**Findings:**
+
+| Metric | Value |
+|--------|-------|
+| Tasks graded | 10/10 |
+| Answer-score distribution | pass=7, partial=2, fail=1 |
+| Metacog-score distribution | match=6, near_match=4, miss=0 |
+| Pass rate by k-level | k=1: 3/5 pass + 2/5 partial; k=2: 3/4 pass + 1/4 fail; k=3: 1/1 pass |
+
+Notable points:
+
+- The single failure (task `10e7-7d82-76fa-48af`) is the bug-detection trace task. The student correctly identified the duplicate `hero.x` assignment in `fall()` initially but then contradicted itself mid-trace, claiming `hero.y` ended up with the second value when in fact both assignments are to `hero.x`. The grader flagged this as `fail` per rubric.
+- The metacog "miss" column is empty: across all 10 tasks the student named cognitive operations in the right family of the catalog skill, even when the answer was wrong or partial.
+- The hardest task (k=3, deldoor side-effects with 3 skill UIDs) passed cleanly, suggesting the framework's k-level rating does not strictly predict difficulty for this student.
+
+**Decision:** Ship v0.1 as-is with the three grids (Task × Score, Answer × Metacog joint, Skill × Task tagging matrix). The other two grids (Model × Skill aggregated, Model × Task aggregated) are deferred to v0.2 when multi-model comparison becomes meaningful.
+
+**Files:**
+- `runs/qwen3-235b-cerebras/grades/<task_uid>.json` — 10 verdict files
+- `results/grids/grid_a_task_score.png`
+- `results/grids/grid_b_answer_metacog.png`
+- `results/grids/grid_c_skill_task.png`
+
+**Lesson:** Three diagnostic grids beat five sparse ones for v0.1. The metacognition cross-tab is the framework's distinctive contribution and was strongly populated in the interesting cells. Render fewer grids well.
+
+---
+
+## 2026-05-15 — Switched student backend from Groq to Cerebras
+
+**Cart / Phase:** Bootyful Demake, student-run phase
+
+**What happened:** The initial student-run plan used local Qwen3-8B via Ollama. On the bootyful_demake cart (1055 Lua lines, ~10K tokens), the first task timed out at 15 minutes on local CPU inference (AMD Ryzen 5700G, 16GB RAM, no discrete GPU). Switched to Qwen3-32B hosted on Groq's free API tier; Groq's free tier capped at 6,000 tokens-per-minute, well below the ~13K-per-task requirement, so every other task returned HTTP 429. Switched again to Cerebras's free API tier, which offered 30,000 TPM and a larger Qwen variant.
+
+**Findings:**
+
+- Local CPU inference is not viable for code-comprehension evaluation on carts this size with thinking-mode generation.
+- Groq's free-tier TPM is a hard cap that makes large-context evaluation impractical.
+- Cerebras's free tier permits Qwen3-235B-A22B-Instruct-2507, a mixture-of-experts model with 22B active parameters per inference. This is a stronger model than the originally planned 8B, but is what was available.
+- A Python urllib User-Agent of `Python-urllib/3.x` triggered HTTP 403 on large payloads against Cerebras's edge layer. Adding an explicit `User-Agent: Mozilla/5.0 (pico8-skill-eval/0.1)` header resolved it.
+- Cerebras's rolling rate-limit window is ~30 seconds. The default 15-second sleep between calls produced every-other-task 429s; bumping to 35 seconds resolved the pattern.
+
+**Decision:** Use Qwen3-235B-A22B-Instruct-2507 on Cerebras as the v0.1 student model. Document the swap chain (Qwen3-8B local → Qwen3-32B Groq → Qwen3-235B Cerebras) honestly in any external writeup.
+
+**Files:**
+- `scripts/run_student_cerebras.py` — final runner
+- `runs/qwen3-235b-cerebras/outputs/<task_uid>.json` — 10 student responses
+
+**Lesson:** Pre-validating against rate-limit caps and User-Agent quirks before launching a batch run saves several hours of debugging. For v0.2, test one API call end-to-end before authoring the runner.
+
+---
+
+## 2026-05-14 — Skill catalog incomplete: `gameinit` chunk was not extracted
+
+**Cart / Phase:** Bootyful Demake, skill extraction (followup)
+
+**What happened:** While preparing the cart for student testing, noticed that the original two-chunk extraction did not cover the `gameinit_and_helpers` section of the cart (containing the `levels`, `doors`, `keydb`, `booty` data tables and the `wait`/`slow`/`timer` helpers). Several extracted skills reference these data structures without the extraction having seen the definitions.
+
+**Decision:** Documented the gap. Did not re-run extraction or task generation; v0.1's 10 tasks were generated from the 33-skill catalog as it stood. Noted that v0.2 should run a supplementary extraction on the missed chunk before any further task generation.
+
+**Files:**
+- `extraction/raw/bootyful_demake.json` — original chunked extraction (33 skills, two chunks)
+- `extraction/raw/bootyful_demake_whole_cart.json` — earlier whole-cart extraction (18 skills) kept for comparison
+
+**Lesson:** Chunking must be exhaustive over the cart's `__lua__` section. Across all chunks for a given cart, the union of chunk contents must equal the full Lua source. Skipping any portion silently produces a catalog that under-represents the cart. Added §2.7 to QA_GUIDELINE_AND_PROMPTS.md to formalize this rule.
+
+---
+
+## 2026-05-14 — Extraction granularity comparison: chunked vs whole-cart
+
+**Cart / Phase:** Bootyful Demake, skill extraction
+
+**What happened:** Skill extraction was run twice on the same cart with different chunking strategies.
+
+| Run | Chunking | Total skills | k=1 | k=2 | k=3 |
+|-----|----------|--------------|-----|-----|-----|
+| Chunked | 2 chunks | 33 | 7 | 14 | 12 |
+| Whole-cart | 1 chunk | 18 | 5 | 5 | 8 |
+
+**Findings:**
+
+- The whole-cart run produced fewer, broader skills with more k=3 compositional skills. Cross-chunk compositions like `decode_door_key_pairing` and `trace_riding_platform_offset` emerged in the whole-cart run but were split across narrower skills in the chunked run.
+- The whole-cart run caught `detect_dead_defunct_code` (recognizing the cart's travelator/lift system is explicitly commented as defunct). The chunked run missed this.
+- The chunked run preserved more narrow bug-detection signal: 2 bug-detection skills (`spot_buggy_respawn_assignment`, `identify_random_trap_assignment`) vs 1 in the whole-cart run.
+- The chunked run preserved more narrow idiom-specific skills (`spot_shuffle_swap_idiom`, `decode_zspr_scaling_blit`) that were absorbed into broader categories in the whole-cart run.
+
+**Decision:** Use the chunked extraction (33 skills) as the canonical raw catalog for v0.1. The whole-cart catalog functions as a reference for what Phase 1.5 clustering should produce when applied to this cart alone.
+
+**Files:**
+- Canonical: `extraction/raw/bootyful_demake.json` (chunked, 33 skills)
+- Reference: `extraction/raw/bootyful_demake_whole_cart.json` (18 skills)
+- Flattened: `extraction/raw/skills_raw.jsonl` (built from chunked extraction only)
+
+**Lesson:** Framework §3.1 prescribes "extract narrow, cluster later." The chunked run is closer to that rule; the whole-cart run accidentally collapsed the divergent extraction step into the convergent clustering step. Avoid whole-cart extraction for non-trivial carts.
+
+---
+
+## 2026-05-14 — UID validator caught a 5-word skill name
+
+**Cart / Phase:** Bootyful Demake (chunked run), UID assignment
+
+**What happened:** During UID assignment, the validator flagged `match_world_to_screen_coords` as having 5 words instead of 4 (`match` / `world` / `to` / `screen` / `coords`).
+
+**Resolution:** Renamed to `match_world_screen_coords` (dropped "to"). Meaning preserved, format compliant with the 4-word rule.
+
+**Lesson:** Programmatic validation catches naming drift that visual review misses. The 4-word rule is enforced at UID-assignment time, not at extraction time. Reviewers will not catch every off-by-one; tooling will.
+
+---
+
+## 2026-05-14 — First task batch generated for Bootyful Demake
+
+**Cart / Phase:** Bootyful Demake, task generation
+
+**What happened:** Generated 10 evaluation tasks from the 33-skill chunked catalog using Claude Opus 4.7 with the v0.1 task-generation prompt and the whole cart (763 lines of Lua) as input context.
+
+**Findings:**
+
+- Task-type distribution landed at 3/4/3 (localization/tracing/inference) against ~3/3/3 target. Within tolerance.
+- k-distribution landed at 50%/40%/10% against 40%/40%/20% target. One extra k=1, one missing k=3.
+- Coverage: 15 of 33 catalog skills tagged on at least one task (45%). Expected for 10 tasks against 33 skills.
+- Both bug-detection skills (`spot_buggy_respawn_assignment`, `identify_random_trap_assignment`) received at least one task.
+- Task 6 is borderline k=1/k=2: the rubric requires two cognitive operations but only one skill UID is tagged. No catalog skill exists for "reason about counterfactual" which would have been the second tag.
+
+**Decision:** Accept the batch. Assign task UIDs, save to `tasks/bootyful_demake.json`, proceed to student-run phase.
+
+**Files:** `tasks/bootyful_demake.json`
+
+**Lesson:** Whole-cart context produces strong cross-functional tasks (e.g., the bug-detection task traces across `collision()`, `gamedraw()`, and `fall()`). For future single-file carts, send the whole cart as task-generation context.
+
+
+
+
+
+
+
+
+## Template for future entries
+
+```
+## YYYY-MM-DD — One-line summary
+
+**Cart / Phase:** <which cart, which pipeline phase>
+
+**What happened:** <factual description>
+
+**Findings:** <what was learned>
+
+**Decision:** <what was chosen, with rationale>
+
+**Files:** <affected paths>
+
+**Lesson:** <one-sentence takeaway for future work>
+```

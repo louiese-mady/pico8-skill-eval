@@ -1,0 +1,20 @@
+# secrets and env
+.env
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# editor noise
+.vscode/
+.idea/
+*.swp
+
+# (intentionally NOT ignored: runs/, results/, extraction/, tasks/)
+# These are the actual deliverables.

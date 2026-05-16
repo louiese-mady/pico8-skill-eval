@@ -1,0 +1,58 @@
+You are grading one LLM response for an evaluation. You produce two independent scores: an ANSWER score (how well the answer matches the rubric) and a METACOGNITION score (how well the student's chosen skill matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score each axis independently, and you do NOT let your judgment of one axis bleed into the other. A student can have a correct answer with a wrong skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+In the collision() function, the variable `platform` is assigned a boolean value. How is its truth determined, and what does this reveal about how the developer decided which y-coordinates count as standing on a platform?
+
+EXPECTED ANSWER:
+`platform` is set to a literal disjunction of hard-coded hero.y values: hero.y==8 or 32 or 56 or 80 or 136 or 160 or 184 or 208 or 264 or 288 or 312 or 336. It is not derived from any tile lookup or grid math â€” it is a hand-picked list of exact y values. The comment 'dumb way fixme - but it worked - fix later?' confirms this is an ad-hoc hardcoded table rather than a computed grid alignment.
+
+RUBRIC:
+- pass: Identifies that `platform` is a literal `or` chain of specific hero.y constants (not all values needed, but must name it as a hardcoded list) AND notes it is not a computed/grid-aligned check.
+- partial: Identifies the disjunction of y values but misses that this is hardcoded/non-computed, or vice versa.
+- fail: Claims `platform` is computed from tile lookups, fget/mget, or a formula on hero.y.
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- dd6e-bc28-22dd-170d: spot_hardcoded_platform_table — Notices that the platform predicate is a literal disjunction of hand-picked hero.y values rather than a computed grid alignment.
+
+---
+
+STUDENT'S FULL RESPONSE:
+SKILL_CANDIDATES:
+- evaluate hardcoded condition logic
+- trace variable assignment and usage
+- interpret spatial game mechanics from code
+
+SKILL_CHOSEN: evaluate hardcoded condition logic
+
+RATIONALE: The question asks how the truth value of `platform` is determined and what it reveals about the developer's approach, which requires analyzing the explicit list of y-values in a boolean expression to understand the design decision behind platform detection.
+
+ANSWER:
+The variable `platform` is assigned a boolean value based on whether `hero.y` exactly matches one of a predefined set of y-coordinates (8, 32, 56, etc.), which are hardcoded in a long logical OR expression. This reveals that the developer decided which y-coordinates count as standing on a platform by manually listing every valid platform height in the game, rather than calculating them dynamically from map data or tile properties—indicating a rigid, level-specific design where platform positions are fixed and known in advance.
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less specific (e.g., "trace variables" when the catalog skill is "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "8786-02d4-344e-0913",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}

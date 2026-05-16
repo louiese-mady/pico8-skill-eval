@@ -1,0 +1,264 @@
+﻿{
+  "name": "decode_traveling_platform_mount",
+  "definition": "Reconstructs how hero.ron is flipped on/off by comparing hero.x to the platform's left/right bounds and platform width entry [6].",
+  "evidence": "travel_update: nested ifs checking travs[hero.lvl][rideloop][3], [4], [6] to set hero.ron and hero.rx",
+  "k_level": 3,
+  "uid": "c833-c7b6-84ad-a3dc",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "interpret_riding_offset_assignment",
+  "definition": "Sees that hero.rx is computed as platform_x minus hero_x so that later draw code can re-anchor the hero to the moving platform.",
+  "evidence": "hero.rx=travs[hero.lvl][rideloop][1]-hero.x in travel_update",
+  "k_level": 2,
+  "uid": "4f69-22bf-fb1c-00b0",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "compose_tile_lookup_helper",
+  "definition": "Recognizes tile_at as the composition of mget for tile id and fget for tile flags wrapped around pixel-to-tile flooring.",
+  "evidence": "function tile_at(x,y) return fget(mget(flr(x/8),flr(y/8))) end",
+  "k_level": 2,
+  "uid": "165a-a779-1178-1218",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "translate_world_offset_collision",
+  "definition": "Applies the per-level world offset levels[hero.lvl][6]*8 and [7]*8 to hero coordinates before each collision tile lookup.",
+  "evidence": "topleft, topright, floor_tile_below, ladder_d, ladder_u, behind all add levels[hero.lvl][6]*8 / [7]*8 in collision()",
+  "k_level": 2,
+  "uid": "4e5d-c9c4-c4a0-6063",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "spot_hardcoded_platform_table",
+  "definition": "Notices that the platform predicate is a literal disjunction of hand-picked hero.y values rather than a computed grid alignment.",
+  "evidence": "platform = hero.y==8 or hero.y==32 or hero.y==56 ... in collision()",
+  "k_level": 1,
+  "uid": "dd6e-bc28-22dd-170d",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "derive_ladder_direction_probes",
+  "definition": "Distinguishes ladder_d and ladder_u by their probe offset (hero.h vs hero.h-1) and how each enables a different climb direction.",
+  "evidence": "ladder_d = tile_at(..., hero.y+hero.h+...)==2 and ladder_u = tile_at(..., hero.y+hero.h-1+...)==2",
+  "k_level": 2,
+  "uid": "fbd4-d714-74f1-277d",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "match_door_tile_range",
+  "definition": "Maps tile flag values 60-69 to door numbers via the (tile-59) arithmetic to look up the right key and door sprite.",
+  "evidence": "if (topleft>=60 and topleft<=69) then dnum=(topleft-59); dsprite=(topleft-55) in collision()",
+  "k_level": 3,
+  "uid": "118d-e4b2-9d76-85da",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "decode_treasure_flag_range",
+  "definition": "Interprets tile range 34-44 as the treasure pickup band and maps it back to a booty index via (behind-33).",
+  "evidence": "if (behind>=34) and (behind<=44) then onum=(behind-33); booty[hero.lvl][onum][3]=0 in collision()",
+  "k_level": 2,
+  "uid": "49ad-9b02-99a3-eb5b",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "trace_key_state_swap",
+  "definition": "Follows how an existing held key has its keydb status set to 1 before knum becomes the new hero.keyheld on a key pickup.",
+  "evidence": "if not (hero.keyheld==0 or keydb[hero.lvl][hero.keyheld][3]==2) then keydb[hero.lvl][hero.keyheld][3]=1 ... hero.keyheld=knum",
+  "k_level": 3,
+  "uid": "7fd6-c891-6180-8c11",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "infer_falling_death_condition",
+  "definition": "Combines three predicates \u00e2\u20ac\u201d no floor tile, no fading platform on, and not climbing \u00e2\u20ac\u201d to recognize the death trigger.",
+  "evidence": "if floor_tile_below==0 and tempon==false and climb==false then hero.death=true in collision()",
+  "k_level": 2,
+  "uid": "f3ea-5589-2f40-11d5",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "trace_lift_direction_toggle",
+  "definition": "Follows the four-branch dir flag (0/1) state machine in objects() that bounces lift y between its start [3] and end [4] bounds.",
+  "evidence": "lifts[hero.lvl][liftloop][5]==0 / ==1 blocks comparing [2] to [3] and [4] in objects()",
+  "k_level": 2,
+  "uid": "1852-da2a-3cc0-0461",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "identify_random_trap_assignment",
+  "definition": "Recognizes that trap is overwritten every frame inside the items loop, making the bomb selection effectively unstable.",
+  "evidence": "trap=rnd(levels[hero.lvl][2]) placed inside the for items loop in objects()",
+  "k_level": 2,
+  "uid": "6539-1f80-036d-9dd4",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "spot_shuffle_swap_idiom",
+  "definition": "Identifies the Lua multi-assignment swap as a Fisher-Yates-like shuffle, picking two random indices and exchanging items.",
+  "evidence": "items[rand1], items[rand2] = items[rand2], items[rand1] in function shuffle",
+  "k_level": 1,
+  "uid": "78be-627d-2d75-273b",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "decode_zspr_scaling_blit",
+  "definition": "Unpacks how zspr converts a sprite index n into source x/y via modulo/floor and feeds sspr with destination width = source width * dz.",
+  "evidence": "sx = 8 * (n % 16); sy = 8 * flr(n / 16); dw = sw * dz; sspr(sx,sy,sw,sh,dx,dy,dw,dh) in zspr",
+  "k_level": 3,
+  "uid": "a362-333f-34d5-1868",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "recognize_mode_dispatch_pattern",
+  "definition": "Sees _draw and _update as parallel dispatchers that route to per-mode draw/update functions based on the global mode integer.",
+  "evidence": "function _draw and function _update with elseif chains on mode == 0/9/6/3 dispatching to titledraw/deathdraw/etc.",
+  "k_level": 1,
+  "uid": "f6ff-c515-a51a-a5bb",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "parse_wavy_text_sine",
+  "definition": "Sees how each character's y position is offset by sin((tim+i)/speed)*height to produce a per-letter wave animation.",
+  "evidence": "for i=0,#text,1 do print(sub(text,i,i), 32+(i*4), 16+sin((tim+i)/speed)*height,7) in titledraw and windraw",
+  "k_level": 2,
+  "uid": "0c09-ed9b-6503-f614",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "locate_empty_callback_stubs",
+  "definition": "Notes that titleupdate, deathupdate, helpupdate, and winupdate are empty placeholders kept only to satisfy the dispatch table.",
+  "evidence": "function titleupdate() end / function deathupdate() end etc. at the bottom of the chunk",
+  "k_level": 1,
+  "uid": "f616-ead1-69d7-5b61",
+  "source_chunk": "bootyful_demake.p8 :: travel_collision_objects_menus"
+}
+{
+  "name": "identify_draw_callback_function",
+  "definition": "Recognizes gamedraw as the per-frame render routine by spotting cls() followed by map() and sprite draws.",
+  "evidence": "function gamedraw() starting with cls() and map(levels[hero.lvl][6],...)",
+  "k_level": 1,
+  "uid": "de78-5cac-e82d-a324",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "decode_level_table_indexing",
+  "definition": "Interprets the meaning of each numeric index into levels[hero.lvl][n] (e.g., [5]=pirate count, [10]=fading platform count, [11]/[12]=spawn x/y) from context.",
+  "evidence": "levels[hero.lvl][5], levels[hero.lvl][10], levels[hero.lvl][11], levels[hero.lvl][12] used throughout gamedraw and gameupdate",
+  "k_level": 3,
+  "uid": "f5e0-171c-a16b-7b1d",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "trace_cheat_flag_branches",
+  "definition": "Follows how the cheat[] array gates entire rendering and behavior branches such as drawing pirates or alternate ladders.",
+  "evidence": "if cheat[2]==0 then ... draw pirates and if cheat[6]==1 then ... draw alt ladders",
+  "k_level": 2,
+  "uid": "9e86-e1d3-7020-1361",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "recognize_riding_platform_offset",
+  "definition": "Understands that hero.x is being reassigned to a platform's x minus a rider-relative offset hero.rx when hero.ron is true.",
+  "evidence": "if hero.ron==true then hero.x=travs[hero.lvl][1][1]-hero.rx",
+  "k_level": 2,
+  "uid": "1943-2350-ef06-616d",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "parse_fading_platform_loop",
+  "definition": "Reconstructs how a fading platform's span is drawn by stepping from platstart to platend in eight-pixel increments based on its width entry.",
+  "evidence": "platend = platstart + (templatforms[hero.lvl][fadeloop][3]*8); for platpart = platstart, platend, 8 do spr(1,...)",
+  "k_level": 3,
+  "uid": "5454-83b9-ba5d-a43b",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "infer_exit_proximity_check",
+  "definition": "Composes the bounding-box test that detects whether the hero is standing in front of an exit tile before allowing level transition.",
+  "evidence": "exits[hero.lvl][exitloop][1]>=flr(hero.x)-7 and ...<=flr(hero.x)+7 inside the behind==192 block",
+  "k_level": 3,
+  "uid": "ec0b-2a57-ee21-919d",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "detect_button_input_mapping",
+  "definition": "Maps btn(0..3) calls to left/right/up/down directional intent and btnp(4)/btnp(5) to action presses.",
+  "evidence": "btn(0) and platform (left), btn(1) (right), btn(2) (up), btn(3) (down), btnp(5) for exit confirm",
+  "k_level": 1,
+  "uid": "7218-4ec9-c2a1-900f",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "predict_sprite_animation_cycle",
+  "definition": "Sees how move(sprite) advances hero.sp and wraps it back to a base frame using hero.ani as a frame count.",
+  "evidence": "function move(sprite): hero.sp += 1; if hero.sp > sprite+hero.ani then hero.sp = sprite end",
+  "k_level": 2,
+  "uid": "64fd-03f0-9e6f-8c57",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "derive_fadewait_timing_formula",
+  "definition": "Works out how the longest platform width is scanned for and then used to compute fadewait and toggle tempon via time() modulo arithmetic.",
+  "evidence": "maxwidth loop, fadewait = 2+(maxwidth-3), if (time() % fadewait)==0 then tempon=true",
+  "k_level": 3,
+  "uid": "8724-adff-c3ce-6f2a",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "track_pirate_facing_state",
+  "definition": "Follows how pilocate[lvl][n][3] encodes pirate facing direction and is flipped at gap edges, screen edges, and wall tiles.",
+  "evidence": "pilocate[hero.lvl][enemies][3]==false / ==true branches in enemy_update with assignments at gap edges and bounds checks",
+  "k_level": 3,
+  "uid": "829e-6f8a-b128-3db7",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "interpret_tile_range_collision",
+  "definition": "Reads tile_at() return values against the 60-68 inclusive range as the wall-tile predicate that triggers pirate turnaround.",
+  "evidence": "tile_at(...)>=60 and tile_at(...)<=68 in enemy_update's top-right and top-left turnaround blocks",
+  "k_level": 2,
+  "uid": "6cf3-6ae6-6eb7-dd37",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "match_world_to_screen_coords",
+  "definition": "Composes the world-to-screen translation by adding levels[hero.lvl][6]*8 and [7]*8 to pirate coordinates before tile lookup.",
+  "evidence": "tile_at(pilocate[hero.lvl][enemies][1]+4+levels[hero.lvl][6]*8, pilocate[hero.lvl][enemies][2]-8 + levels[hero.lvl][7]*8)",
+  "k_level": 3,
+  "uid": "04ef-3b33-329a-ed53",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "spot_buggy_respawn_assignment",
+  "definition": "Notices that fall() assigns hero.x twice instead of restoring hero.y, recognizing it as a copy-paste bug.",
+  "evidence": "hero.x=levels[hero.lvl][11]; hero.x=levels[hero.lvl][12] inside function fall()",
+  "k_level": 2,
+  "uid": "fafd-15aa-2740-28c7",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "identify_mode_transition_triggers",
+  "definition": "Spots the conditions that flip the global mode variable to switch the game out of normal play (death screen or win).",
+  "evidence": "if hero.lives==0 then mode = 9 and if hero.treas==125 then mode =6 at end of gameupdate",
+  "k_level": 1,
+  "uid": "d910-9602-9ac2-9411",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "locate_door_unlock_sideeffects",
+  "definition": "Catalogs the multiple side effects of deldoor: sfx, fset flag removal, array mutation, three mset tile rewrites, and key consumption.",
+  "evidence": "function deldoor(): sfx(13), fset(dsprite,0), doors[...][3]=0, three mset calls, hero.keyheld=0",
+  "k_level": 3,
+  "uid": "7161-0a33-5480-9dfa",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}
+{
+  "name": "compute_remaining_treasure_total",
+  "definition": "Follows the per-level loop that sums booty[hero.lvl][taken][3] into total to detect level completion.",
+  "evidence": "for taken = 1,levels[hero.lvl][2] do total += booty[hero.lvl][taken][3] end; if total == 0 then centre_print(\"level complete\",113)",
+  "k_level": 2,
+  "uid": "0361-46bb-4152-6809",
+  "source_chunk": "bootyful_demake.p8 :: gamedraw_and_update"
+}

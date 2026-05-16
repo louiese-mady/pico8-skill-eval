@@ -1,0 +1,58 @@
+You are grading one LLM response for an evaluation. You produce two independent scores: an ANSWER score (how well the answer matches the rubric) and a METACOGNITION score (how well the student's chosen skill matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score each axis independently, and you do NOT let your judgment of one axis bleed into the other. A student can have a correct answer with a wrong skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+Find the shuffle() function. What standard algorithmic idiom does the line `items[rand1], items[rand2] = items[rand2], items[rand1]` implement, and why is the surrounding loop a shuffle rather than a sort?
+
+EXPECTED ANSWER:
+The line uses Lua's multi-assignment to swap two array elements in a single statement â€” the classic in-place swap idiom. The surrounding loop picks two random indices rand1 and rand2 (via flr(rnd(num)+1)) each iteration and swaps them, producing a Fisher-Yates-style (random-pair) shuffle. There is no comparison, so it cannot be a sort â€” it just randomly permutes items.
+
+RUBRIC:
+- pass: Identifies it as a swap via Lua multi-assignment AND recognizes the loop as a (Fisher-Yates-style) random shuffle, noting absence of comparisons.
+- partial: Identifies the swap but does not connect it to shuffling, or calls it a shuffle without explaining the swap mechanic.
+- fail: Misidentifies the construct (e.g., calls it a sort, an assignment to a tuple, or a copy).
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- 78be-627d-2d75-273b: spot_shuffle_swap_idiom — Identifies the Lua multi-assignment swap as a Fisher-Yates-like shuffle, picking two random indices and exchanging items.
+
+---
+
+STUDENT'S FULL RESPONSE:
+SKILL_CANDIDATES:
+- identify algorithmic pattern in code
+- distinguish between sorting and shuffling operations
+- interpret swap idiom in array manipulation
+
+SKILL_CHOSEN: identify algorithmic pattern in code
+
+RATIONALE: This question asks to recognize the specific algorithmic behavior implemented by the swap line and to explain why the overall function is a shuffle, which requires identifying the pattern of random pairwise swaps over iterations.
+
+ANSWER:
+The line `items[rand1], items[rand2] = items[rand2], items[rand1]` implements the standard idiom of swapping two elements in an array, specifically exchanging the values at indices `rand1` and `rand2`. The surrounding loop constitutes a shuffle (specifically, a form of random transposition shuffle) because it repeatedly selects two random indices and swaps their elements, thereby randomly reordering the array over multiple iterations. It is not a sort because it does not compare elements to arrange them by value or any deterministic rule; instead, it introduces randomness through unstructured swaps, which disrupts order rather than creating it.
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less specific (e.g., "trace variables" when the catalog skill is "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "61e0-c6e6-ebcd-54e8",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}

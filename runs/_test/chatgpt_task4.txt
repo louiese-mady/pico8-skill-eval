@@ -1,0 +1,66 @@
+SKILL_CANDIDATES:
+
+trace variable across functions
+identify state transition bug
+follow frame-by-frame game loop execution
+
+SKILL_CHOSEN: trace variable across functions
+
+RATIONALE: The question requires tracking how hero.death and hero.x change between collision(), gamedraw(), and fall() across consecutive frames.
+
+ANSWER:
+On the frame where this condition becomes true inside collision():
+
+if floor_tile_below==0 and tempon==false and climb==false then
+  if hero.death==false then
+    hero.death=true
+  end
+end
+
+the following happens:
+
+hero.death changes from false to true.
+collision() ends.
+Nothing else happens to the death state during that same frame.
+
+Then on the next frame, gamedraw() runs:
+
+if hero.death==false then
+    spr(...)
+else
+    fall()
+end
+
+Since hero.death is now true, fall() is called.
+
+Inside fall():
+
+hero.lives-=1
+hero.x=levels[hero.lvl][11]
+hero.x=levels[hero.lvl][12]
+hero.death=false
+
+There is a bug here. The second assignment should clearly have been:
+
+hero.y=levels[hero.lvl][12]
+
+but instead it overwrites hero.x.
+
+So after fall() completes:
+
+hero.x first becomes the respawn X coordinate (levels[hero.lvl][11])
+then immediately gets overwritten with the respawn Y coordinate (levels[hero.lvl][12])
+hero.y is never changed
+
+Therefore the final value of hero.x is:
+
+levels[hero.lvl][12]
+
+which is actually the intended spawn Y value, not the X value.
+
+This was almost certainly not what the developer intended. The intended behavior was likely:
+
+hero.x=levels[hero.lvl][11]
+hero.y=levels[hero.lvl][12]
+
+to reset both coordinates correctly after death.

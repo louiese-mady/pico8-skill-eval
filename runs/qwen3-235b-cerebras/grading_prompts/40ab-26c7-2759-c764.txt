@@ -1,0 +1,108 @@
+You are grading one LLM response for an evaluation. You produce two independent scores: an ANSWER score (how well the answer matches the rubric) and a METACOGNITION score (how well the student's chosen skill matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score each axis independently, and you do NOT let your judgment of one axis bleed into the other. A student can have a correct answer with a wrong skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+Walk through what happens in collision() when `behind` equals 25 (i.e., the hero steps onto a key tile) and the hero is currently holding key number 3 whose keydb status is not 2. List each mutation made to game state (in order), including what happens to the previously held key and what hero.keyheld becomes.
+
+EXPECTED ANSWER:
+behind==25 falls into the (behind>=21 and behind<=29) key branch. Order of mutations:
+1. knum = 25 - 20 = 5 (the new key index).
+2. The condition `not (hero.keyheld==0 or keydb[hero.lvl][hero.keyheld][3]==2)` is true (keyheld==3, status not 2), so keydb[hero.lvl][3][3] = 1 â€” the previously held key 3 is marked back to unheld/available.
+3. keydb[hero.lvl][5][3] = 0 â€” the new key 5 is marked unavailable (picked up).
+4. fset(behind, 0) â€” clear the tile's flag.
+5. mset on (keydb[hero.lvl][5][1], keydb[hero.lvl][5][2]) and the tile below â€” erase the key's two map tiles.
+6. hero.keyheld = 5 â€” the new key becomes the held key.
+Net result: old key 3 returned to status 1 (available again on the map for re-pickup), key 5 consumed from map, hero.keyheld swapped from 3 to 5.
+
+RUBRIC:
+- pass: Correctly orders the mutations: previously-held key (3) gets keydb status set to 1, new key (5) gets status 0, tile cleared via fset/mset, then hero.keyheld is reassigned to 5. Must show the old-key write happens BEFORE hero.keyheld is overwritten.
+- partial: Gets the swap idea right but errors on order, or omits one of the key keydb writes / the hero.keyheld reassignment.
+- fail: Claims hero.keyheld is overwritten before the old key's status is preserved, or misidentifies knum, or skips the keydb mutations entirely.
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- 7fd6-c891-6180-8c11: trace_key_state_swap — Follows how an existing held key has its keydb status set to 1 before knum becomes the new hero.keyheld on a key pickup.
+- 49ad-9b02-99a3-eb5b: decode_treasure_flag_range — Interprets tile range 34-44 as the treasure pickup band and maps it back to a booty index via (behind-33).
+
+---
+
+STUDENT'S FULL RESPONSE:
+SKILL_CANDIDATES:
+- trace variable across functions
+- decode tile flag arithmetic
+- simulate conditional execution flow
+- map state mutations in sequence
+
+SKILL_CHOVEN: simulate conditional execution flow
+
+RATIONALE: This question requires stepping through a specific conditional branch in the `collision()` function and tracking the exact sequence of state changes, which demands simulating how the code executes under the given conditions.
+
+ANSWER:
+When `behind` equals 25, the hero has stepped onto a tile flagged as a key (since `behind >= 21 and behind <= 29`). The key number is calculated as `knum = behind - 20 = 25 - 20 = 5`. So this is key number 5.
+
+The code then checks:
+```lua
+if not (hero.keyheld == 0 or keydb[hero.lvl][hero.keyheld][3] == 2)
+```
+
+Given:
+- `hero.keyheld == 3` (holding key 3)
+- key 3's `keydb[hero.lvl][3][3]` is **not** 2 → so `keydb[hero.lvl][3][3] ≠ 2`
+
+Then:
+- `hero.keyheld == 0` is false
+- `keydb[hero.lvl][hero.keyheld][3] == 2` is false
+- So the condition `(hero.keyheld == 0 or keydb[hero.lvl][hero.keyheld][3] == 2)` is false
+- Therefore, `not (...)` is **true**, so the block executes
+
+Mutations in order:
+
+1. `keydb[hero.lvl][hero.keyheld][3] = 1` → `keydb[hero.lvl][3][3]` is set to 1  
+   (The previously held key #3 is marked as "unheld" in the database.)
+
+2. `keydb[hero.lvl][knum][3] = 0` → `keydb[hero.lvl][5][3] = 0`  
+   (Key #5 is now marked as "held" — no longer available in the world.)
+
+3. `fset(behind, 0)` → Flag 25 is cleared (removes key sprite's flag)
+
+4. `mset(keydb[hero.lvl][knum][1], keydb[hero.lvl][knum][2], 0)` →  
+   The tile at key #5's x,y is set to 0 (removes key sprite from map)
+
+5. `mset(keydb[hero.lvl][knum][1], keydb[hero.lvl][knum][2] + 1, 0)` →  
+   The tile below key #5 is also cleared (likely for multi-tile sprites)
+
+6. `hero.keyheld = knum` → `hero.keyheld = 5`  
+   (Hero now holds key #5 instead of key #3.)
+
+Final state:
+- Hero holds key 5
+- Previously held key 3 is returned to "unheld" state (status 1)
+- Key 5 is removed from the map and marked as held
+- Map tiles where key 5 was are cleared
+
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less specific (e.g., "trace variables" when the catalog skill is "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "40ab-26c7-2759-c764",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}

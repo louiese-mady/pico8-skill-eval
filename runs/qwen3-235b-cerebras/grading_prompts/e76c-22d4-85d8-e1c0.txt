@@ -1,0 +1,66 @@
+You are grading one LLM response for an evaluation. You produce two independent scores: an ANSWER score (how well the answer matches the rubric) and a METACOGNITION score (how well the student's chosen skill matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score each axis independently, and you do NOT let your judgment of one axis bleed into the other. A student can have a correct answer with a wrong skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+Look at how the cheat[] array is used across gamedraw(), gameupdate(), collision(), and objects(). Pick two specific cheat indices and describe, for each, what gameplay feature is gated and what game behavior changes when that cheat entry equals its 'on' value. Cite the variable index and condition for each.
+
+EXPECTED ANSWER:
+Reasonable answers include any two of:
+- cheat[2]==0 gates pirate behavior. In gamedraw(), pirates are only drawn `if cheat[2]==0`. In gameupdate(), `enemy_update()` is only called `if cheat[2]==0`. In collision(), pirate-hits-hero death checks are wrapped in `if cheat[2]==0`. So when cheat[2] != 0, pirates are invisible, frozen, and non-lethal.
+- cheat[3]==0 gates key/door placement in objects(): the entire key-placement and door-placement loops are inside `if cheat[3]==0`. Setting it to non-zero suppresses spawning keys and doors on the map.
+- cheat[5]==1 in gameupdate() enables level-skip: pressing btnp(4) increments hero.lvl (up to 19â†’20) instead of restarting the current level's position.
+- cheat[6]==1 enables an alternate-ladder rendering path in gamedraw() (drawing extra ladders via altladders) and is also used in fading-platform draw, and the `not cheat[6]==1` guard appears around travelator/lift drawing and update in objects() and travel_update.
+Student should pick TWO and cite the index + condition + behavior.
+
+RUBRIC:
+- pass: Correctly identifies two distinct cheat[] indices, the comparison value used to enable them, AND a specific game behavior each gates with a code-location citation.
+- partial: Identifies one cheat correctly with full detail, or two cheats but with vague or partly wrong behavior descriptions.
+- fail: Gets indices or on/off comparisons wrong, or describes behaviors not actually gated by cheat[].
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- 9e86-e1d3-7020-1361: trace_cheat_flag_branches — Follows how the cheat[] array gates entire rendering and behavior branches such as drawing pirates or alternate ladders.
+- f5e0-171c-a16b-7b1d: decode_level_table_indexing — Interprets the meaning of each numeric index into levels[hero.lvl][n] (e.g., [5]=pirate count, [10]=fading platform count, [11]/[12]=spawn x/y) from context.
+
+---
+
+STUDENT'S FULL RESPONSE:
+SKILL_CANDIDATES:
+- trace variable across functions
+- interpret conditional logic in rendering vs update cycles
+- correlate array indices with game mechanic descriptions
+
+SKILL_CHOSEN: trace variable across functions
+
+RATIONALE: This question requires following how specific elements of the `cheat[]` array are referenced in multiple functions to alter gameplay, which demands tracing each index’s usage across the codebase to determine its effect.
+
+ANSWER:
+- **cheat[2]**: This cheat gates the presence of pirates in the game. When `cheat[2] == 0`, pirates are drawn and updated normally in `gamedraw()` and `enemy_update()`, and their collision with the player is checked in `collision()`. If `cheat[2] == 1`, the game skips drawing and updating pirates entirely (e.g., `if cheat[2]==0 then` in `gamedraw()` and `enemy_update()`), effectively removing enemy threats from gameplay.
+
+- **cheat[6]**: This cheat controls the behavior of fading (disappearing) platforms. When `cheat[6] == 1`, the game draws ladders in place of moving travelators or lifts (via the `altladders` data) in `gamedraw()`, and disables the normal travelator and lift rendering (since `if not cheat[6]==1` blocks their drawing). It also forces fading platforms to remain permanently visible (`if templatforms[...][4]==1 or cheat[6]==1 then`). Thus, when `cheat[6] == 1`, the player gains stable access to alternate paths via always-visible platforms and added ladders, bypassing timing challenges.
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less specific (e.g., "trace variables" when the catalog skill is "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "e76c-22d4-85d8-e1c0",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}

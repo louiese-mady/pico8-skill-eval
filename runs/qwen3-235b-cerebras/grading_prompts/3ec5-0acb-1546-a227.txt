@@ -1,0 +1,87 @@
+You are grading one LLM response for an evaluation. You produce two independent scores: an ANSWER score (how well the answer matches the rubric) and a METACOGNITION score (how well the student's chosen skill matches the skill the task was designed to test).
+
+You are strict but fair. You read the student's full response, score each axis independently, and you do NOT let your judgment of one axis bleed into the other. A student can have a correct answer with a wrong skill label, or the right skill label with a wrong answer.
+
+---
+
+TASK PROMPT:
+Consider what happens when the hero approaches a closed door tile from the left side, holding the matching key. Walk through (a) which collision variable detects the door, (b) how the door number is derived from the tile flag, (c) how the key match is checked, and (d) every distinct side effect of deldoor() that follows. Be specific about flag arithmetic and the three mset calls.
+
+EXPECTED ANSWER:
+(a) Approaching from the left, `topleft = tile_at(hero.x + levels[hero.lvl][6]*8, hero.y - 1 + levels[hero.lvl][7]*8)` reads the tile flag at the hero's top-left, and the branch `if not (topleft==0) and (topleft>=60 and topleft<=69)` fires for door tile flags 60â€“69.
+
+(b) `dnum = topleft - 59` maps flag 60â€“69 â†’ door number 1â€“10, and `dsprite = topleft - 55` maps flag â†’ door sprite index (5â€“14).
+
+(c) `if hero.keyheld == topleft - 59` â€” i.e., hero.keyheld == dnum â€” checks the key match. If matched, `keydb[hero.lvl][hero.keyheld][3] = 2` marks the key as 'used', then deldoor() is called. Otherwise `hero.x += 1` nudges the hero back (blocking entry).
+
+(d) deldoor() side effects, in order:
+1. sfx(13) â€” plays unlock sound.
+2. fset(dsprite, 0) â€” removes the door's tile flag.
+3. doors[hero.lvl][dnum][3] = 0 â€” marks the door as opened in the doors table.
+4. mset(doors[hero.lvl][dnum][1], doors[hero.lvl][dnum][2], 1) â€” overwrites top door tile with tile 1.
+5. mset(doors[hero.lvl][dnum][1], doors[hero.lvl][dnum][2]+1, 0) â€” clears middle door tile.
+6. mset(doors[hero.lvl][dnum][1], doors[hero.lvl][dnum][2]+2, 0) â€” clears bottom door tile.
+7. hero.keyheld = 0 â€” consumes the key.
+
+RUBRIC:
+- pass: Correctly names topleft as the detector, gives dnum=topleft-59 and dsprite=topleft-55, identifies the keyheld==dnum check, AND lists at least 5 of the 7 deldoor side effects (must include the three mset calls and key consumption).
+- partial: Gets the detection and arithmetic right but misses 3+ deldoor side effects, or lists side effects without the flag arithmetic.
+- fail: Misidentifies the detector variable, the arithmetic (e.g., dnum=topleft-60), or claims deldoor only does sound/keyheld with no map mutation.
+
+CATALOG SKILLS the task was designed to test (the student did NOT see these):
+- 118d-e4b2-9d76-85da: match_door_tile_range — Maps tile flag values 60-69 to door numbers via the (tile-59) arithmetic to look up the right key and door sprite.
+- 7161-0a33-5480-9dfa: locate_door_unlock_sideeffects — Catalogs the multiple side effects of deldoor: sfx, fset flag removal, array mutation, three mset tile rewrites, and key consumption.
+- 4e5d-c9c4-c4a0-6063: translate_world_offset_collision — Applies the per-level world offset levels[hero.lvl][6]*8 and [7]*8 to hero coordinates before each collision tile lookup.
+
+---
+
+STUDENT'S FULL RESPONSE:
+SKILL_CANDIDATES:
+- trace variable across functions
+- decode tile flag arithmetic
+- simulate conditional logic in collision detection
+
+SKILL_CHOSEN: decode tile flag arithmetic
+
+RATIONALE: This question hinges on understanding how tile flags encode door identities and how arithmetic transforms those flags into usable indices, which is central to explaining the door interaction mechanics.
+
+ANSWER:
+(a) The collision variable that detects the door is `topleft`, which is set in the `collision()` function via `topleft=tile_at(hero.x+levels[hero.lvl][6]*8,hero.y-1+levels[hero.lvl][7]*8)`. This checks the tile just above and to the left of the hero’s position, capturing a door tile if one exists adjacent to the hero’s left side.
+
+(b) The door number is derived from the tile flag using arithmetic: `dnum = (topleft - 59)`. Since door tiles use flags in the range 60–69 (as checked by `topleft >= 60 and topleft <= 69`), subtracting 59 maps flag 60 → 1, 61 → 2, etc., yielding a 1-based door number. This `dnum` is used to index into door-related arrays like `doors[hero.lvl][dnum]`.
+
+(c) The key match is checked with `if hero.keyheld == topleft - 59`. Since `topleft - 59` computes the door number (same as `dnum`), this condition verifies whether the hero is holding a key (stored in `hero.keyheld`) that matches the door’s number. For example, if the door flag is 63, `dnum = 4`, and the hero must have `hero.keyheld == 4` to pass.
+
+(d) The `deldoor()` function triggers several side effects:
+- `sfx(13)` plays a sound effect for door opening.
+- `fset(dsprite,0)` clears the flag of the door sprite (where `dsprite = topleft - 55`, mapping flag 60 → 5, so sprite 5 becomes unflagged).
+- `doors[hero.lvl][dnum][3] = 0` updates the door’s state in the `doors` array to “open” (0 means open/cleared).
+- Three `mset` calls modify the map tiles:
+  1. `mset(doors[hero.lvl][dnum][1], doors[hero.lvl][dnum][2], 1)` sets the top tile of the door to tile 1 (a ladder, visually replacing the door top).
+  2. `mset(doors[hero.lvl][dnum][1], doors[hero.lvl][dnum][2]+1, 0)` clears the middle tile to empty (tile 0).
+  3. `mset(doors[hero.lvl][dnum][1], doors[hero.lvl][dnum][2]+2, 0)` clears the bottom tile to empty (tile 0), fully removing the door from the map.
+- Finally, `hero.keyheld = 0` drops the key from the hero’s possession, preventing reuse.
+
+---
+
+Grade both axes.
+
+ANSWER SCORE — read the student's ANSWER section. Compare against the expected_answer using the rubric. Return one of:
+- "pass": answer minimally contains what rubric.pass requires
+- "partial": answer is partly correct but misses at least one element rubric.pass requires
+- "fail": answer is incorrect, missing, or matches rubric.fail
+
+METACOGNITION SCORE — read the student's SKILL_CHOSEN. Compare to the catalog skill(s) above. Return one of:
+- "match": student's free-form skill name maps clearly onto one of the catalog skills. Phrasings differ but the concept is the same.
+- "near_match": student named something in the right family but less specific (e.g., "trace variables" when the catalog skill is "trace duplicate variable assignment")
+- "miss": student named something unrelated, OR named the skill so vaguely it doesn't carry signal (e.g., "answer the question")
+
+Return ONLY valid JSON in this exact schema:
+
+{
+  "task_uid": "3ec5-0acb-1546-a227",
+  "answer_score": "pass" | "partial" | "fail",
+  "metacog_score": "match" | "near_match" | "miss",
+  "answer_rationale": "<1-2 sentences: why this answer score>",
+  "metacog_rationale": "<1 sentence: why this metacog score>"
+}
