@@ -1,0 +1,857 @@
+SYSTEM:
+You are a quality reviewer for a PICO-8 cart corpus used to evaluate LLM
+code-understanding capabilities. You apply seven inclusion criteria strictly
+and return a structured JSON verdict. You are not lenient on borderline
+cases — you flag them for human review rather than guessing.
+USER:
+Apply the seven criteria below to the cart provided. For each criterion,
+return one of: "pass", "fail", "borderline", or "unknown" (the last when
+the criterion cannot be determined from the cart contents alone, e.g.
+license).
+The seven criteria:
+1. READABLE_IDENTIFIERS. Function and variable names are human-readable
+   English words or idiomatic short forms. Single-letter function names
+   used pervasively, or deliberately scrambled identifiers, fail.
+2. MULTIPLE_GAMEPLAY_SYSTEMS. The cart implements at least three distinct
+   gameplay or simulation systems from: movement, enemies/AI, collision,
+   particles/effects, scoring/progression, inventory/resources, level/map
+   traversal, audio reactivity, UI/menus beyond a title screen.
+3. MODERATE_COMPLEXITY. Lua tokens between 500 and 6,000 AND characters
+   between 2,000 and 28,000. If the cart's INFO output is not embedded
+   in the prompt, return "unknown" for this criterion and note that
+   programmatic check is required.
+4. NO_HEAVY_MINIFICATION. The cart is not written in compressed style:
+   no pervasive same-line statement chaining, no one-character variable
+   names beyond loop counters, no aggressive inlining or PICO-8
+   shorthand abuse that slows reading.
+5. NOT_PREDOMINANTLY_ASSETS. After mentally stripping non-__lua__
+   sections, the remaining code is still substantive enough to support
+   skill extraction. Pure asset packs with thin Lua wrappers fail.
+6. LICENSE_RECORDED. The cart's license is identifiable from the cart
+   contents or the surrounding metadata. If the cart has author
+   attribution and findable source, the criterion can pass even if the
+   license is "all rights reserved" (private use is allowed). A cart
+   with no author and no source fails.
+7. SUBSTANTIVELY_DISTINCT. The cart is not a near-duplicate of any cart
+   already in the corpus. If no existing corpus is provided in this
+   prompt, return "unknown" and note that this criterion is checked at
+   corpus assembly time, not per-cart.
+OVERALL VERDICT RULES:
+- All seven "pass" or ("pass" with at most two "unknown" for criteria 3,
+  6, or 7 specifically): verdict is "include".
+- Any "fail": verdict is "exclude".
+- Otherwise: verdict is "borderline".
+Return ONLY valid JSON in this schema, no commentary outside the JSON:
+{
+  "cart_filename": "<as provided>",
+  "verdict": "include" | "exclude" | "borderline",
+  "criterion_scores": {
+    "readable_identifiers": "pass" | "fail" | "borderline" | "unknown",
+    "multiple_gameplay_systems": "pass" | "fail" | "borderline" | "unknown",
+    "moderate_complexity": "pass" | "fail" | "borderline" | "unknown",
+    "no_heavy_minification": "pass" | "fail" | "borderline" | "unknown",
+    "not_predominantly_assets": "pass" | "fail" | "borderline" | "unknown",
+    "license_recorded": "pass" | "fail" | "borderline" | "unknown",
+    "substantively_distinct": "pass" | "fail" | "borderline" | "unknown"
+  },
+  "notes": "<2-4 sentences explaining the verdict, citing specific
+            evidence from the cart>",
+  "systems_observed": ["<system name>", ...],
+  "approximate_lua_lines": <integer>
+}
+CART:
+<pico-8 cartridge // http://www.pico-8.com
+version 8
+__lua__
+-- bootyful demake
+-- jfc 1984 & nct 2017
+
+-- rough code ahead - proceed at your own risk
+
+function gamedraw()
+  cls()
+  map(levels[hero.lvl][6],levels[hero.lvl][7],0,0,16,13) -- draw map
+
+  if hero.lvl==1 and first==true then
+    color(11)
+    centre_print("press z if you get stuck",113)
+    color(7)
+  else
+    first=false
+  end
+  -- draw ladders if using fading platforms
+  if cheat[6]==1 then
+      -- add alt ladder number to levels
+      for ladnum = 1,levels[hero.lvl][13] do
+      -- loop through different ladders for level
+        ladx=altladders[hero.lvl][ladnum][1] -- x
+        lady=altladders[hero.lvl][ladnum][2] -- y
+        for ladraw = 0,2 do
+          mset(ladx,lady+ladraw,2)
+          -- draw ladder
+        end
+      end
+  end
+
+  objects()
+
+  -- player moving platform movement
+  if hero.ron==true then
+    hero.x=travs[hero.lvl][1][1]-hero.rx
+    -- player x = traveling platform x - riding x
+  end
+if hero.death==false then
+    spr(hero.sp,hero.x,hero.y,hero.w/8,hero.h/8,hero.dr) -- draw hero
+  else fall()
+end
+  if cheat[2]==0 then
+  -- draw pirates if present
+    if not (levels[hero.lvl][5]==0) then
+      for enemies = 1,levels[hero.lvl][5] do -- draw pirates
+        spr(pirate.sp,pilocate[hero.lvl][enemies][1],pilocate[hero.lvl][enemies][2],pirate.w,pirate.h,pilocate[hero.lvl][enemies][3])
+      end
+    end
+  end
+  -- draw travelators if present - defunct
+  if not cheat[6]==1 then
+    if not (levels[hero.lvl][8]==0) then
+      for travloops = 1,levels[hero.lvl][8] do
+        spr(45,travs[hero.lvl][travloops][1],travs[hero.lvl][travloops][2],1,1)
+        -- spr,x,y - size1,1 - fixme - account for width
+      end
+    end
+  end
+  -- draw lifts if present - defunct
+  if not cheat[6]==1 then
+    if not (levels[hero.lvl][9]==0) then
+      for liftloops = 1,levels[hero.lvl][9] do
+        spr(46,lifts[hero.lvl][liftloops][1],lifts[hero.lvl][liftloops][2],1,1)
+        -- spr,x,y - size1,1 - fixme - account for width
+      end
+    end
+  end
+-- draw fading platforms if present
+-- check if flash on - in draw section
+  if (tempon==true) then
+    for fadeloop = 1, levels[hero.lvl][10] do
+      if templatforms[hero.lvl][fadeloop][4]==1 or cheat[6]==1 then
+        platstart = templatforms[hero.lvl][fadeloop][1]
+        platend = platstart + (templatforms[hero.lvl][fadeloop][3]*8)
+        for platpart = platstart, platend, 8 do
+          if not (templatforms[hero.lvl][fadeloop][4]==2) then
+          -- templatforms is also used to mark no go gaps
+            spr(1,platpart,templatforms[hero.lvl][fadeloop][2]) -- x,y
+            fset(1,1,true)
+          end
+        end
+      end
+    end
+  end
+
+  stats()
+  debug()
+  collision() -- collision tests
+end -- gamedraw end
+
+function stats()
+  -- stats
+  color(10)
+  print("l",0,106)
+  color(7)
+  print(hero.lvl,4,106)
+
+  for life = 0,hero.lives-1 do -- show lives
+    spr(18,14+life*8,104)
+  end
+  spr(19,5*8,13*8) -- key
+    print(hero.keyheld,55,106)
+  spr(30,8*8,13*8) -- booty
+    print(hero.treas,78,106)
+  spr(14,11*8,13*8) -- treasure
+    print(125-hero.treas,102,106)
+  spr(31,15*8,13*8) -- exit
+
+  total=0
+  for taken = 1,levels[hero.lvl][2] do
+    total += booty[hero.lvl][taken][3]
+  end
+  if total == 0 then
+    centre_print("level complete",113)
+    first=false
+  end
+
+  if (behind==192) then
+    -- is there an exit and which one is it?
+      for exitloop = 1,levels[hero.lvl][4] do
+          if exits[hero.lvl][exitloop][2]==flr(hero.y)
+            and (exits[hero.lvl][exitloop][1]>=flr(hero.x)-7
+            and exits[hero.lvl][exitloop][1]<=flr(hero.x)+7) then
+              -- is player in front of the exit?
+            levl=exits[hero.lvl][exitloop][3]
+            -- set destination
+            if (levl >= 10 and levl <= 99) then
+              print(levl,120,106)
+              else print (levl,122,106)
+            end
+            if (btnp(5)) then
+              -- is the playter pressing x on the exit?
+              -- hero.keyheld=0 -- made some levels impossible!
+              hero.lvl=levl
+              break
+              -- change level to where exit leads
+          end
+        end
+      end
+    end
+--end
+
+  color(8)
+  centre_print("bootyful demake",120)
+end
+
+-- doesn't work - needs to be rewritten
+function fall()
+  if hero.death==true then
+    sfx(10)
+--    for y=hero.y,hero.y+32 do
+      -- slow down?
+--      timer(0.25)
+--      spr(76,hero.x,y,hero.w/8,hero.h/8)
+--      spr(74,hero.x,y,hero.w/8,hero.h/8)
+      -- maybe change to fall upside down
+--    end
+    wait(1)
+    hero.lives-=1
+    hero.x=levels[hero.lvl][11]
+    hero.x=levels[hero.lvl][12]
+    hero.death=false
+  end
+end
+
+function debug() -- fixme - remove at end
+--  print ("hx "..flr(hero.x),0,113)
+--  print ("hy "..flr(hero.y),25,113)
+--  print ("tx "..flr(hero.x/8),50,113)
+--  print ("ty "..flr(hero.y/8),75,113)
+--  print ("bh "..behind,50,113)
+--  print ("bn "..beneath,75,113)
+--  print ("fb "..floor_below,110,113)
+end
+
+function move(sprite)
+  hero.mov = true
+  hero.sp += 1
+  if hero.sp > sprite+hero.ani then
+    hero.sp = sprite
+  end
+end
+
+function gameupdate() -- swapped with update
+  hero.mov = false
+  if(btn(0) and platform) then
+      climb=false
+        if hero.ron == true then
+        -- riding platform
+          hero.rx+=1 --maybe hero.rx+=hero.spd
+        else hero.x-=hero.spd -- left
+        end
+      hero.dr = true
+      if hero.x < 1 then
+        hero.x = 1
+      end
+      move(hero.ini)
+  end
+  if(btn(1) and platform) then
+      climb=false
+        if hero.ron == true then
+          hero.rx-=1
+        else hero.x+=hero.spd -- right
+        end
+      hero.dr = false
+      if hero.x > world.w-hero.w then
+        hero.x = world.w-hero.w-1
+      end
+      move(hero.ini)
+   end
+    if (btn(3) and ladder_d) then -- down
+      climb=true
+      hero.y+=1
+      move(hero.clisp)
+    end
+    if (btn(2) and ladder_u) then -- up
+      climb=true
+      hero.y-=1
+      move(hero.clisp)
+    end
+
+  if (btnp(4)) then
+    if cheat[5]==1 and hero.lvl<20 then
+    -- if cheat is on can skip levels
+    hero.lvl+=1
+    hero.x=levels[hero.lvl][11]
+    hero.y=levels[hero.lvl][12]
+  else -- if cheat isn't on restart level position
+      hero.x=levels[hero.lvl][11]
+      hero.y=levels[hero.lvl][12]
+      --    was hero.sx=hero.x & hero.sy=hero.y
+    end
+  end
+
+  if not hero.mov then -- animation
+    if climb==false then
+      hero.sp = hero.ini
+    else hero.sp = hero.cli
+    end
+  end
+  if cheat[2]==0 then
+    enemy_update()
+  end
+  travel_update()
+
+  -- find fading platform wait time
+  maxwidth = 3
+  for widthloop = 1,levels[hero.lvl][10] do
+    width = templatforms[hero.lvl][widthloop][3]
+      if width > maxwidth then
+        maxwidth = width
+        -- find longest fading platform for level
+      end
+  end
+  fadewait = 2+(maxwidth-3)
+  -- add platform specific timing later?
+  printh(fadewait)
+  if (time() % fadewait)==0 then -- was % 3
+    tempon=true
+  end
+  fademax = fadewait*2
+  if (time() % (fadewait*2))==0 then -- was % 6
+    tempon=false
+  end
+
+  if hero.lives==0 then
+    mode = 9 -- death screen
+  end
+  if hero.treas==125 then
+    mode =6
+  end
+--    print("you are dead")
+--    wait(30)
+--  end
+end -- gameupdate / movement end
+
+function deldoor()
+  sfx(13)
+  fset(dsprite,0) -- remove flag
+  doors[hero.lvl][dnum][3]=0 -- change array
+  mset(doors[hero.lvl][dnum][1],doors[hero.lvl][dnum][2],1)
+  mset(doors[hero.lvl][dnum][1],doors[hero.lvl][dnum][2]+1,0)
+  mset(doors[hero.lvl][dnum][1],(doors[hero.lvl][dnum][2])+2,0)
+  hero.keyheld=0
+end
+
+function enemy_move(pisprite)
+  pirate.mov = true
+  pirate.sp += 1
+  if pirate.sp > pisprite+pirate.ani then
+    pirate.sp = pisprite
+  end
+end
+
+function enemy_update()
+-- if (time() % 0.25)==0 then -- too slow
+  if slow(5) then
+    for enemies = 1,levels[hero.lvl][5] do -- add y
+      pirate.mov = false
+      if pilocate[hero.lvl][enemies][3]==false then -- facing & moving right
+        pilocate[hero.lvl][enemies][1]-=pirate.spd
+        enemy_move(pirate.ini)
+      end
+      if pilocate[hero.lvl][enemies][3]==true then -- facing & moving left
+        pilocate[hero.lvl][enemies][1]+=pirate.spd
+        enemy_move(pirate.ini)
+      end
+
+      piy = pilocate[hero.lvl][enemies][2]
+      pix = pilocate[hero.lvl][enemies][1]
+      for platloop = 1, levels[hero.lvl][10] do
+      -- go through templatforms
+        gapy = templatforms[hero.lvl][platloop][2]
+        -- account for level +y?
+        gapleft = templatforms[hero.lvl][platloop][1] - 4
+        -- account for level +x?
+        gaplen = templatforms[hero.lvl][platloop][3] * 8
+        gapright = gapleft + gaplen
+        -- account for level +x?
+        if gapy==piy + pirate.h*8 then
+        -- if gap on platform pirate walks on
+          if pix == gapright then
+            pilocate[hero.lvl][enemies][3]=true
+          end
+          if pix == gapleft then
+            pilocate[hero.lvl][enemies][3]=false
+          end
+        end
+      end
+
+--     if at top right ... turn around -- was 4+levels[hero.lvl][6]*8
+      if  tile_at(pilocate[hero.lvl][enemies][1]+4+levels[hero.lvl][6]*8,
+        pilocate[hero.lvl][enemies][2]-8 + levels[hero.lvl][7]*8)>=60 and
+        tile_at(pilocate[hero.lvl][enemies][1]+4+levels[hero.lvl][6]*8,
+        pilocate[hero.lvl][enemies][2]-8 + levels[hero.lvl][7]*8)<=68 then
+        pilocate[hero.lvl][enemies][3]=false
+        test=true
+      end -- should have used same function for player & pirate!
+--     if at top left ... turn around
+      if tile_at(pilocate[hero.lvl][enemies][1]-1+levels[hero.lvl][6]*8,
+        pilocate[hero.lvl][enemies][2]-1 + levels[hero.lvl][7]*8)>=60 and
+        tile_at(pilocate[hero.lvl][enemies][1]-1+levels[hero.lvl][6]*8,
+        pilocate[hero.lvl][enemies][2]-1 + levels[hero.lvl][7]*8)<=68 then
+        pilocate[hero.lvl][enemies][3]=true
+      end
+      if pilocate[hero.lvl][enemies][1] <= 1 then
+        pilocate[hero.lvl][enemies][1] = 1
+        pilocate[hero.lvl][enemies][3]=true
+      end
+      if pilocate[hero.lvl][enemies][1] >= 120 then
+        pilocate[hero.lvl][enemies][1] = 120-pirate.w -- *8
+        pilocate[hero.lvl][enemies][3]=false
+      end
+      if not pirate.mov then
+        pirate.sp = pirate.ini
+      end
+    end
+  end
+end
+
+function travel_update()
+  -- moving platforms - defunct
+  if not cheat[6]==1 then
+    for rideloop = 1,levels[hero.lvl][8] do
+
+      if hero.y+hero.h==travs[hero.lvl][rideloop][2] then
+      -- if player on same level (y) as platform
+
+        if hero.ron==true then -- test if move off platform
+          if travs[hero.lvl][rideloop][6]==1 then
+          -- if platform width is 1
+            if hero.rx >= 5 or hero.rx <= -5 then
+            -- test where player is on platform
+            -- 5 assumes 8 width/2+1 - only made for single width
+              hero.ron=false
+            end
+          end
+          if travs[hero.lvl][rideloop][6]==2 then -- fixme - add into or or else?
+          -- if platform width is 2
+            if hero.rx >= 5 or hero.rx <= -15 then
+              hero.ron=false
+            end
+          end
+        end -- end of move off platform check
+
+        -- player getting on to traveling platform (still part of if above)
+        if hero.ron==false then -- fixme - also need to account for moving between moving platforms?
+        -- only works for heading right so far
+          if hero.x <= travs[hero.lvl][rideloop][3] then
+          -- check if left of traveling platform
+            if hero.x == travs[hero.lvl][rideloop][1]-4 then
+            -- if player x >= traveling x - player width
+              hero.ron=true
+              hero.rx=travs[hero.lvl][rideloop][1]-hero.x
+              -- riding x = travel platform x - player x
+            end
+          end
+        end -- end of left to right check
+
+        if hero.x >= travs[hero.lvl][rideloop][4] then -- (still part of if above)
+        -- check if right of traveling platform
+          if travs[hero.lvl][rideloop][6]==1 then
+            if hero.x == travs[hero.lvl][rideloop][1]+4 then -- right to left
+              hero.ron=true
+              hero.rx=travs[hero.lvl][rideloop][1]-hero.x
+              -- riding x = travel platform x - player x
+            end
+          end
+          if travs[hero.lvl][rideloop][6]==2 then
+            if hero.x-8 == travs[hero.lvl][rideloop][1]+4 then -- right to left
+              hero.ron=true
+              hero.rx=travs[hero.lvl][rideloop][1]-hero.x
+              -- riding x = travel platform x - player x
+            end
+          end
+        end -- end of right to left check
+      end -- end of level check
+    end -- end of travelator loop
+  end
+-- fixme - remove when replaced
+  if not cheat[6]==1 then
+    for liftloop = 1,levels[hero.lvl][9] do
+        -- if hero.x==lifts[hero.lvl][liftloop][1] then
+        -- if at x co-ord - fixme needs larger range
+        if hero.x == lifts[hero.lvl][liftloop][1]-4 then
+        -- if to left moving right and stepping over edge
+          if hero.y+hero.h==lifts[hero.lvl][liftloop][2] then
+          -- if at y co-ord - fixme needs a little finese
+            lifttravel=true
+          end
+          if lifttravel==true then
+            hero.y = lifts[hero.lvl][liftloop][2]-hero.h
+            -- seems simplest way - fixme - add to draw?
+        end
+      end
+    end
+  end -- end of travel_update function
+end
+
+function tile_at(x,y)
+  return fget(mget(flr(x/8),flr(y/8)))
+end
+
+function collision()
+--  beneath=fget(mget(hero.x+levels[hero.lvl][6]*8,hero.y+hero.h)) - bottom half of hero / test x+1
+  topleft=tile_at(hero.x+levels[hero.lvl][6]*8,hero.y-1+levels[hero.lvl][7]*8) -- door left - was x-1
+-- was topleft=tile_at(hero.x-1,hero.y-1) -- door left - was -8
+  topright=tile_at(hero.x+hero.w/2+levels[hero.lvl][6]*8,hero.y-8+levels[hero.lvl][7]*8) -- door right
+-- was topright=tile_at(hero.x+8,hero.y-8)
+floor_below = tile_at( hero.x, hero.y+hero.h )
+floor_tile_below = tile_at(hero.x+levels[hero.lvl][6]*8, hero.y+hero.h+levels[hero.lvl][7]*8 )
+  platform = hero.y==8 or hero.y==32 or hero.y==56 or hero.y==80
+   or hero.y==136 or hero.y==160 or hero.y==184 or hero.y==208
+    or hero.y==264 or hero.y==288 or hero.y==312 or hero.y==336
+  -- dumb way fixme - but it worked - fix later?
+-- fixed getting stuck on ladder - finally!
+  ladder_d = tile_at (hero.x+hero.w/2+levels[hero.lvl][6]*8, hero.y+hero.h+levels[hero.lvl][7]*8)==2
+  ladder_u = tile_at (hero.x+hero.w/2+levels[hero.lvl][6]*8, hero.y+hero.h-1+levels[hero.lvl][7]*8)==2
+  behind = tile_at(hero.x+levels[hero.lvl][6]*8, hero.y+levels[hero.lvl][7]*8)
+  -- for treasure & keys & exits?
+  if cheat[2]==0 then
+    for enemies = 1,levels[hero.lvl][5] do
+    -- if pirate hits into you die
+      if pilocate[hero.lvl][enemies][1]==hero.x and pilocate[hero.lvl][enemies][2]==hero.y then
+        hero.lives-=1
+        sfx(10)
+        wait(1)
+        hero.x=levels[hero.lvl][11]
+        hero.y=levels[hero.lvl][12]
+      end
+    end
+  end
+
+  if not (topleft==0) and (topleft>=60 and topleft<=69) then
+  -- if door to left
+    dnum=(topleft-59)
+    dsprite=(topleft-55)
+    if hero.keyheld==topleft-59 then
+      keydb[hero.lvl][hero.keyheld][3]=2
+      deldoor()
+    else hero.x+=1
+    end
+  end
+  if not (topright==0) and (topright>=60 and topright<=69) then
+  -- if door to right
+    dnum=(topright-59)
+    dsprite=(topright-55)
+    if hero.keyheld==topright-59 then
+      keydb[hero.lvl][hero.keyheld][3]=2
+      deldoor()
+    else hero.x-=1
+    end
+  end
+
+  if not (behind==0) then
+  -- pick up object
+    if (behind>=34) and (behind<=44) then -- if treasure flag
+      onum=(behind-33)
+      booty[hero.lvl][onum][3]=0
+      fset(behind,0)
+      mset(booty[hero.lvl][onum][1],booty[hero.lvl][onum][2],0) -- added 16
+      mset(booty[hero.lvl][onum][1],booty[hero.lvl][onum][2]+1,0)
+      hero.treas+=1
+      -- was it a trap?
+      if trap==onum then -- if object is bomb
+        bomb(trap)
+      end
+    end
+    if (behind>=21) and (behind<=29) then
+    -- if it's a key
+      knum=(behind-20) -- which key is it? 1-8
+      if not (hero.keyheld==0 or keydb[hero.lvl][hero.keyheld][3]==2) then
+      -- if holding any key, or key used
+        keydb[hero.lvl][hero.keyheld][3]=1 -- set that key back to unheld
+      end
+      keydb[hero.lvl][knum][3]=0 -- make unavailable
+      fset(behind,0)
+      mset(keydb[hero.lvl][knum][1],keydb[hero.lvl][knum][2],0)
+      mset(keydb[hero.lvl][knum][1],keydb[hero.lvl][knum][2]+1,0)
+      hero.keyheld=knum
+    end
+  end
+
+if floor_tile_below==0 and tempon==false and climb==false then
+  -- add if not riding platform
+  if hero.death==false then
+    hero.death=true
+--    fall()
+  end
+end
+
+end -- collision end
+
+function objects()
+  if cheat[3]==0 then
+  -- place keys
+    for keys = 1,levels[hero.lvl][3] do
+     if not (keydb[hero.lvl][keys][3]==0 or keydb[hero.lvl][keys][3]==2) then -- only if keys there
+        fset(20+keys,20+keys)
+        mset(keydb[hero.lvl][keys][1],keydb[hero.lvl][keys][2],20+keys)
+        mset(keydb[hero.lvl][keys][1],(keydb[hero.lvl][keys][2]+1),20)
+      end
+    end
+    -- place doors
+    for doornum = 1,levels[hero.lvl][3] do
+      if not (doors[hero.lvl][doornum][3]==0) then -- only if doors closed
+        fset(4+doornum,59+doornum) -- door sprites from 5, flags from 60
+        mset(doors[hero.lvl][doornum][1],doors[hero.lvl][doornum][2],4+doornum)
+        mset(doors[hero.lvl][doornum][1],doors[hero.lvl][doornum][2]+1,4)
+        mset(doors[hero.lvl][doornum][1],(doors[hero.lvl][doornum][2])+2,3)
+      end
+    end
+  end
+  -- place treasures
+  for items = 1,levels[hero.lvl][2] do
+    if not (booty[hero.lvl][items][3]==0) then
+      fset(33+btype[hero.lvl][items],33+items)
+      mset(booty[hero.lvl][items][1],booty[hero.lvl][items][2],btype[hero.lvl][items]+33)
+--      fset(49+booty[hero.lvl][items][3],49+items) -- don't need?
+      mset(booty[hero.lvl][items][1],booty[hero.lvl][items][2]+1,btype[hero.lvl][items]+49)
+    end
+    -- set random object to be trap
+    trap=rnd(levels[hero.lvl][2])
+    if hero.lvl==21 then trap=3 end -- test
+  end
+  -- move travelators - defunct
+  if not cheat[6]==1 then
+    for travloop = 1,levels[hero.lvl][8] do
+      -- if traveling forward (dir=0)
+      if travs[hero.lvl][travloop][5]==0 then
+        travs[hero.lvl][travloop][1]+=1 -- increase platform x
+      end
+      -- if reach end of path start back the other way (dir=1)
+      if travs[hero.lvl][travloop][1]==travs[hero.lvl][travloop][4] then
+        travs[hero.lvl][travloop][5]=1
+      end
+      -- if traveling back (dir=1)
+      if travs[hero.lvl][travloop][5]==1 then
+        travs[hero.lvl][travloop][1]-=1 -- decrease platform x
+      end
+      -- if back at the start go forward again
+      if travs[hero.lvl][travloop][1]==travs[hero.lvl][travloop][3] then
+        travs[hero.lvl][travloop][5]=0
+      end
+    end
+    -- move lifts - defunct
+    for liftloop = 1, levels[hero.lvl][9] do
+      -- if traveling downward (dir=0)
+      if lifts[hero.lvl][liftloop][5]==0 then
+        lifts[hero.lvl][liftloop][2]+=1 -- increase platform y
+      end
+      -- if reach end of path start back the other way (dir=1)
+      if lifts[hero.lvl][liftloop][2]==lifts[hero.lvl][liftloop][4] then
+        lifts[hero.lvl][liftloop][5]=1
+      end
+      -- if traveling back (dir=1)
+      if lifts[hero.lvl][liftloop][5]==1 then
+        lifts[hero.lvl][liftloop][2]-=1 -- decrease platform y
+      end
+      -- if back at the start go forward again
+      if lifts[hero.lvl][liftloop][2]==lifts[hero.lvl][liftloop][3] then
+        lifts[hero.lvl][liftloop][5]=0
+      end
+    end
+  end -- objects end
+end
+
+function shuffle(items,num)
+  for l = 1, num+1 do
+    local rand1 = flr(rnd(num)+1)
+    local rand2 = flr(rnd(num)+1)
+    items[rand1], items[rand2] = items[rand2], items[rand1]
+  end
+  return(items)
+end
+
+-- unused booty tap code
+function bomb(trap)
+  -- place bomb where object was -
+  cycle=time()
+  trapx = booty[hero.lvl][trap][1]+16
+  trapy = booty[hero.lvl][trap][2]+24
+  spr(96,trapx,trapy)
+  -- initial warning sound - 18
+    sfx(18)
+--    wait(45)
+  if cycle==time()-3 then
+  -- explosion animation and sound
+  for l =1,3 do
+--    zspr(96,1,1,96-8*l,72-8*l,l)
+  sfx(16)
+    zspr(96,1,1,trapx-8*1,trapy-8*1,l)
+  end
+end
+  -- check for death - player hero.x / hero.y
+  -- maybe call death as function
+end
+
+function zspr(n,w,h,dx,dy,dz)
+-- from http://www.lexaloffle.com/bbs/?tid=2429
+    sx = 8 * (n % 16)
+    sy = 8 * flr(n / 16)
+    sw = 8 * w
+    sh = 8 * h
+    dw = sw * dz
+    dh = sh * dz
+    sspr(sx,sy,sw,sh, dx,dy,dw,dh)
+end
+
+function titleinit() -- menu
+  -- opening menu with thanks to http://pico-8.wikia.com/wiki/multiple_states_system
+  mode = 0
+    music(0)
+  text = "bootyful demake"
+  speed = 25
+  height = 10
+  tim = 0
+end
+
+function _draw() -- menu
+  if (mode == 0) then --title screen mode
+    titledraw()
+  elseif (mode == 9) then
+    deathdraw()
+  elseif (mode == 6) then
+    windraw()
+  elseif (mode == 3) then
+    helpdraw()
+  else
+    gamedraw()
+  end
+end
+
+function titledraw() -- menu
+  cls()
+  sspr(56,32,8,8,0,0,128,94) -- sky
+  circfill (110,48,8,10)-- sun
+  -- wavy text - thanks to http://www.lexaloffle.com/bbs/?tid=28262
+  tim += 1
+  for i=0,#text,1 do -- moving title text
+    print(sub(text,i,i),
+    32+(i*4),
+    16+sin((tim+i)/speed)*height,7)
+  end
+  sspr(57,45,22,24,32,40,66,72) -- ship
+  sspr(64,32,8,8,0,94,128,24) -- water
+  centre_print("press x to start",100)
+  if (btn(5)) then
+    gameinit()
+  end
+  color(10)
+  centre_print("press z for help",108)
+  color(7)
+  if (btn(4)) then
+    mode = 3
+    helpdraw()
+  end
+  centre_print("nct 2017 / jfc 1984",120)
+end -- title end
+
+function windraw() -- menu
+  cls()
+  text = "congratulations"
+  sspr(64,32,8,8,0,0,128,94) -- dark sky
+  circfill (110,48,8,6)-- moon
+  tim += 1
+  for i=0,#text,1 do -- moving title text
+    print(sub(text,i,i),
+    32+(i*4),
+    16+sin((tim+i)/speed)*height,7)
+  end
+  sspr(57,45,22,14,32,48,66,48) -- sunk ship
+  sspr(72,32,8,8,0,94,128,24) -- black water
+  color(10)
+  centre_print("you have won!",104)
+  color(7)
+end -- title end
+
+function _update() -- menu
+  if (mode == 0) then --title screen mode
+    titleupdate()
+  elseif (mode == 9) then
+    deathupdate()
+  elseif (mode == 6) then
+    winupdate()
+  elseif (mode == 3) then
+    helpupdate()
+  else
+    gameupdate()
+  end
+end
+
+function deathdraw()
+  cls()
+  centre_print("you have died!",16)
+  zspr(101,2,2,32,32,4)
+  centre_print("press x to restart",110)
+  wait(1)
+  if (btn(5)) then
+    wait(1)
+    titleinit()
+  end
+end
+
+-- remind me what these were for again?
+function titleupdate() -- menu
+end
+function deathupdate()
+end
+function helpupdate()
+end
+function winupdate()
+end
+
+function helpdraw()
+  cls()
+  centre_print("collect booty to win the game",8)
+  for bl=1,10 do
+    spr(bl+33,16+bl*8,12,1,2) -- 34-44
+  end
+  centre_print("use keys to open doors",32)
+  spr(21,8,28)
+  spr(20,8,36)
+  spr(5,112,28)
+  spr(4,112,36)
+  centre_print("climb ladders",48)
+  spr(2,24,40)
+  spr(2,24,48)
+  centre_print("press x on exits",64)
+  spr(61,100,48,2,1)
+  spr(32,100,56,2,1)
+  spr(48,100,64,2,1)
+  centre_print("avoid pirates",80)
+  spr(109,24,72,1,2,1)
+  centre_print("cross disappearing platforms",96)
+  -- stats()
+  color(10)
+  centre_print("press x to start",112)
+  color(7)
+  wait(1)
+  if (btnp(5)) then
+    wait(1)
+    gameinit()
+  end
+end
+
+function centre_print(strtxt,py) print(strtxt,64-(#strtxt*2),py) end
+
+function _init() -- move to gameinit?
+  titleinit() -- menu
+end -- init end
+>

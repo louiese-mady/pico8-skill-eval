@@ -55,7 +55,7 @@ Not applicable at v0.1. For multi-cart v0.2+, splits should be by cart (not by s
 Yes. Each `.p8` file is fully self-contained Lua + binary asset sections. No external dependencies are required to read the cart's source code. To run the cart visually, PICO-8 (commercial software by Lexaloffle) is required, but this corpus's purpose is code comprehension, not gameplay.
 
 **Does the corpus contain confidential or offensive data?**
-No. All carts are publicly published on the Lexaloffle BBS under their authors' chosen licenses.
+No. All carts are publicly published on the Lexaloffle BBS under their authors' chosen licenses. 
 
 ---
 

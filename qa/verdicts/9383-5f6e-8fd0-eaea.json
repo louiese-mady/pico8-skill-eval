@@ -1,0 +1,33 @@
+{
+  "cart_uid": "9383-5f6e-8fd0-eaea",
+  "cart_filename": "bootyful_demake.p8",
+  "verdict": "borderline",
+  "verdict_after_review": "include",
+  "criterion_scores": {
+    "readable_identifiers": "pass",
+    "multiple_gameplay_systems": "pass",
+    "moderate_complexity": "unknown",
+    "no_heavy_minification": "pass",
+    "not_predominantly_assets": "pass",
+    "license_recorded": "pass",
+    "substantively_distinct": "unknown"
+  },
+  "notes": "Identifiers are clearly readable English (hero, pirate, templatforms, enemy_update, deldoor, pilocate) with only conventional short forms. The cart shows multiple distinct systems: player movement with ladder climbing, enemy AI with platform-edge turning, collision/tile checks, level/map traversal with exits, HUD/stats UI, fading platforms, and a lives/scoring system. Code style is verbose with comments and multi-line blocks, not minified. Author attribution is present in the header ('jfc 1984 & nct 2017' - a Jet Set Willy demake by nct), satisfying license_recorded. Token/character counts and corpus-duplication checks cannot be determined from the embedded source alone and require programmatic verification.",
+  "systems_observed": [
+    "movement",
+    "enemies/AI",
+    "collision",
+    "level/map traversal",
+    "UI/menus beyond a title screen",
+    "scoring/progression",
+    "inventory/resources"
+  ],
+  "approximate_lua_lines": 260,
+  "review_note": "Per the QA prompt's overall verdict rules: 'pass with at most two unknown for criteria 3, 6, or 7 specifically' resolves to 'include'. The two unknowns here are criteria 3 (moderate_complexity) and 7 (substantively_distinct) — both eligible per the rule. The LLM judge returned 'borderline' but the correct rule-derived verdict is 'include'. The corpus manifest reflects the corrected verdict.",
+  "judge_model": "Claude Opus 4.7",
+  "judge_run_date": "2026-05-15",
+  "programmatic_checks_required": [
+    "moderate_complexity: run PICO-8 INFO to get token/char counts and verify 500-6000 tokens / 2000-28000 chars",
+    "substantively_distinct: re-check at corpus assembly time when corpus has 2+ carts"
+  ]
+}
